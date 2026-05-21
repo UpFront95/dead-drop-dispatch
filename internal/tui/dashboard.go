@@ -108,10 +108,9 @@ func renderFooter(showHelp bool, width int, styles Styles) string {
 func renderCity(state game.GameState, styles Styles) string {
 	var b strings.Builder
 	for _, district := range state.Districts {
-		fmt.Fprintf(&b, "%-22s %s\n",
-			styles.Accent.Render(district.Name),
-			formatFactionControl(district.FactionControl),
-		)
+		name := styles.Accent.Width(25).Render(district.Name)
+		faction := styles.InlineCode.Width(9).Align(lipgloss.Right).Render(formatFactionControl(district.FactionControl))
+		fmt.Fprintf(&b, "%s %s\n", name, faction)
 		fmt.Fprintf(&b, "  SURV %d   TRAF %d   DANG %d   SIG %d\n",
 			district.Surveillance,
 			district.Traffic,
