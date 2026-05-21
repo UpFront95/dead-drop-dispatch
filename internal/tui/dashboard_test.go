@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"charm.land/lipgloss/v2"
+
 	"dead-drop-dispatch/internal/content"
 )
 
@@ -32,8 +34,12 @@ func TestRenderDashboardTargetSizeContent(t *testing.T) {
 		}
 	}
 
-	if got := lineCount(content); got > TargetHeight {
-		t.Fatalf("rendered dashboard height = %d, want <= %d", got, TargetHeight)
+	if got := lineCount(content); got != TargetHeight {
+		t.Fatalf("rendered dashboard height = %d, want %d", got, TargetHeight)
+	}
+
+	if got := maxLineWidth(content); got > TargetWidth {
+		t.Fatalf("rendered dashboard width = %d, want <= %d", got, TargetWidth)
 	}
 }
 
@@ -42,4 +48,12 @@ func lineCount(value string) int {
 		return 0
 	}
 	return strings.Count(value, "\n") + 1
+}
+
+func maxLineWidth(value string) int {
+	maxWidth := 0
+	for _, line := range strings.Split(value, "\n") {
+		maxWidth = max(maxWidth, lipgloss.Width(line))
+	}
+	return maxWidth
 }

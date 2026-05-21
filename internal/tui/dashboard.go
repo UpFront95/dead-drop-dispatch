@@ -52,7 +52,7 @@ func RenderDashboard(view DashboardView) tea.View {
 	}
 
 	topH := 14
-	bottomH := 16
+	bottomH := 20
 	spacerH := bodyHeight - topH - bottomH
 	if spacerH < 1 {
 		spacerH = 1
@@ -73,7 +73,7 @@ func RenderDashboard(view DashboardView) tea.View {
 
 	top := lipgloss.JoinHorizontal(lipgloss.Top, city, strings.Repeat(" ", gap), runners, strings.Repeat(" ", gap), jobs)
 	bottom := lipgloss.JoinHorizontal(lipgloss.Top, messages, strings.Repeat(" ", gap), detail)
-	body := lipgloss.JoinVertical(lipgloss.Left, top, strings.Repeat("\n", spacerH), bottom)
+	body := lipgloss.JoinVertical(lipgloss.Left, top, blankLines(width, spacerH), bottom)
 
 	rendered := styles.Base.Width(width).Height(height).Render(lipgloss.JoinVertical(lipgloss.Left, header, body, footer))
 	result := tea.NewView(rendered)
@@ -188,11 +188,10 @@ func panel(title string, body string, width int, height int, focused bool, style
 		style = styles.PanelFocus
 	}
 
-	frameW, frameH := style.GetFrameSize()
-	innerW := max(1, width-frameW)
-	innerH := max(1, height-frameH)
-	content := styles.PanelTitle.Render(title) + "\n" + styles.Divider.Render(strings.Repeat("─", innerW)) + "\n" + body
-	return style.Width(innerW).Height(innerH).Render(content)
+	frameW, _ := style.GetFrameSize()
+	contentW := max(1, width-frameW)
+	content := styles.PanelTitle.Render(title) + "\n" + styles.Divider.Render(strings.Repeat("─", contentW)) + "\n" + body
+	return style.Width(width).Height(height).Render(content)
 }
 
 func max(a, b int) int {
@@ -200,6 +199,17 @@ func max(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func blankLines(width int, height int) string {
+	if height <= 0 {
+		return ""
+	}
+	lines := make([]string, height)
+	for i := range lines {
+		lines[i] = strings.Repeat(" ", width)
+	}
+	return strings.Join(lines, "\n")
 }
 
 func formatFactionControl(faction game.FactionID) string {
