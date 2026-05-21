@@ -110,13 +110,13 @@ func renderCity(state game.GameState, styles Styles) string {
 	for _, district := range state.Districts {
 		name := styles.Accent.Width(25).Render(district.Name)
 		faction := styles.InlineCode.Width(9).Align(lipgloss.Right).Render(formatFactionControl(district.FactionControl))
-		fmt.Fprintf(&b, "%s %s\n", name, faction)
-		fmt.Fprintf(&b, "  SURV %d   TRAF %d   DANG %d   SIG %d\n",
+		fmt.Fprintf(&b, "%s%s%s\n", name, styles.PanelText.Render(" "), faction)
+		fmt.Fprintln(&b, styles.PanelText.Render(fmt.Sprintf("  SURV %d   TRAF %d   DANG %d   SIG %d",
 			district.Surveillance,
 			district.Traffic,
 			district.Danger,
 			district.SignalQuality,
-		)
+		)))
 	}
 	return strings.TrimRight(b.String(), "\n")
 }
@@ -125,16 +125,19 @@ func renderJobs(state game.GameState, styles Styles) string {
 	if len(state.AvailableJobs) == 0 {
 		return strings.Join([]string{
 			styles.Muted.Render("No contracts posted."),
-			"",
-			"Dispatch wire is quiet.",
-			"Job generation comes next.",
+			styles.PanelText.Render(" "),
+			styles.PanelText.Render("Dispatch wire is quiet."),
+			styles.PanelText.Render("Job generation comes next."),
 		}, "\n")
 	}
 
 	var b strings.Builder
 	for _, job := range state.AvailableJobs {
-		fmt.Fprintf(&b, "%s  %s -> %s\n", styles.Accent.Render(job.Title), job.Origin, job.Destination)
-		fmt.Fprintf(&b, "  pay %d  deadline %d turns  cargo %s\n", job.Payout, job.DeadlineTurns, job.Cargo)
+		fmt.Fprintf(&b, "%s%s\n",
+			styles.Accent.Render(job.Title),
+			styles.PanelText.Render(fmt.Sprintf("  %s -> %s", job.Origin, job.Destination)),
+		)
+		fmt.Fprintln(&b, styles.PanelText.Render(fmt.Sprintf("  pay %d  deadline %d turns  cargo %s", job.Payout, job.DeadlineTurns, job.Cargo)))
 	}
 	return strings.TrimRight(b.String(), "\n")
 }
@@ -142,13 +145,17 @@ func renderJobs(state game.GameState, styles Styles) string {
 func renderRunners(state game.GameState, styles Styles) string {
 	var b strings.Builder
 	for _, runner := range state.Runners {
-		stateText := styles.Accent.Render(string(runner.State))
+		stateText := styles.Accent.Width(9).Render(string(runner.State))
 		if runner.State != game.RunnerReady {
-			stateText = styles.Warning.Render(string(runner.State))
+			stateText = styles.Warning.Width(9).Render(string(runner.State))
 		}
 		fmt.Fprintf(&b, "%s\n", styles.Accent.Render(runner.Name))
-		fmt.Fprintf(&b, "  %-9s SPD %d  STL %d  NRV %d  TLK %d\n", stateText, runner.Speed, runner.Stealth, runner.Nerve, runner.Talk)
-		fmt.Fprintf(&b, "  LOY %d  STR %d  CAP 0/%d\n", runner.Loyalty, runner.Stress, game.MaxJobsPerRunner)
+		fmt.Fprintf(&b, "%s%s%s\n",
+			styles.PanelText.Render("  "),
+			stateText,
+			styles.PanelText.Render(fmt.Sprintf(" SPD %d  STL %d  NRV %d  TLK %d", runner.Speed, runner.Stealth, runner.Nerve, runner.Talk)),
+		)
+		fmt.Fprintln(&b, styles.PanelText.Render(fmt.Sprintf("  LOY %d  STR %d  CAP 0/%d", runner.Loyalty, runner.Stress, game.MaxJobsPerRunner)))
 	}
 	return strings.TrimRight(b.String(), "\n")
 }
@@ -160,8 +167,13 @@ func renderMessages(state game.GameState, styles Styles) string {
 
 	var b strings.Builder
 	for _, message := range state.Messages {
-		fmt.Fprintf(&b, "[%02d] %s / %s\n", message.Turn, styles.Accent.Render(message.From), message.Subject)
-		fmt.Fprintf(&b, "     %s\n", message.Body)
+		fmt.Fprintf(&b, "%s%s%s%s\n",
+			styles.PanelText.Render(fmt.Sprintf("[%02d] ", message.Turn)),
+			styles.Accent.Render(message.From),
+			styles.PanelText.Render(" / "),
+			styles.PanelText.Render(message.Subject),
+		)
+		fmt.Fprintln(&b, styles.PanelText.Render(fmt.Sprintf("     %s", message.Body)))
 	}
 	return strings.TrimRight(b.String(), "\n")
 }
@@ -169,12 +181,12 @@ func renderMessages(state game.GameState, styles Styles) string {
 func renderDetail(state game.GameState, styles Styles) string {
 	lines := []string{
 		styles.Accent.Render("Desk state"),
-		fmt.Sprintf("Phase: %s", state.Phase),
-		fmt.Sprintf("Seed: %d", state.RandomSeed),
-		"",
+		styles.PanelText.Render(fmt.Sprintf("Phase: %s", state.Phase)),
+		styles.PanelText.Render(fmt.Sprintf("Seed: %d", state.RandomSeed)),
+		styles.PanelText.Render(" "),
 		styles.Accent.Render("Current focus"),
-		"Use tab to inspect panels.",
-		"",
+		styles.PanelText.Render("Use tab to inspect panels."),
+		styles.PanelText.Render(" "),
 		styles.Muted.Render("Exact risk math stays off-screen."),
 		styles.Muted.Render("Route factors will appear here."),
 	}
