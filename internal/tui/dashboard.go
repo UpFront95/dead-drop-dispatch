@@ -51,7 +51,7 @@ func RenderDashboard(view DashboardView) tea.View {
 		midW = width - leftW - rightW - gap*2
 	}
 
-	topH := 14
+	topH := 16
 	bottomH := 20
 	spacerH := bodyHeight - topH - bottomH
 	if spacerH < 1 {
@@ -108,8 +108,8 @@ func renderFooter(showHelp bool, width int, styles Styles) string {
 func renderCity(state game.GameState, styles Styles) string {
 	var b strings.Builder
 	for _, district := range state.Districts {
-		name := styles.Accent.Width(25).Render(district.Name)
-		faction := styles.InlineCode.Width(9).Align(lipgloss.Right).Render(formatFactionControl(district.FactionControl))
+		name := styles.PanelText.Width(25).Render(district.Name)
+		faction := styles.PanelText.Width(9).Align(lipgloss.Right).Render(formatFactionControl(district.FactionControl))
 		fmt.Fprintf(&b, "%s %s\n", name, faction)
 		fmt.Fprintf(&b, "  SURV %d   TRAF %d   DANG %d   SIG %d\n",
 			district.Surveillance,
@@ -124,7 +124,7 @@ func renderCity(state game.GameState, styles Styles) string {
 func renderJobs(state game.GameState, styles Styles) string {
 	if len(state.AvailableJobs) == 0 {
 		return strings.Join([]string{
-			styles.Muted.Render("No contracts posted."),
+			styles.PanelText.Render("No contracts posted."),
 			"",
 			"Dispatch wire is quiet.",
 			"Job generation comes next.",
@@ -133,7 +133,7 @@ func renderJobs(state game.GameState, styles Styles) string {
 
 	var b strings.Builder
 	for _, job := range state.AvailableJobs {
-		fmt.Fprintf(&b, "%s  %s -> %s\n", styles.Accent.Render(job.Title), job.Origin, job.Destination)
+		fmt.Fprintf(&b, "%s  %s -> %s\n", styles.PanelText.Render(job.Title), job.Origin, job.Destination)
 		fmt.Fprintf(&b, "  pay %d  deadline %d turns  cargo %s\n", job.Payout, job.DeadlineTurns, job.Cargo)
 	}
 	return strings.TrimRight(b.String(), "\n")
@@ -142,11 +142,8 @@ func renderJobs(state game.GameState, styles Styles) string {
 func renderRunners(state game.GameState, styles Styles) string {
 	var b strings.Builder
 	for _, runner := range state.Runners {
-		stateText := styles.Accent.Render(string(runner.State))
-		if runner.State != game.RunnerReady {
-			stateText = styles.Warning.Render(string(runner.State))
-		}
-		fmt.Fprintf(&b, "%s\n", styles.Accent.Render(runner.Name))
+		stateText := styles.PanelText.Render(string(runner.State))
+		fmt.Fprintf(&b, "%s\n", styles.PanelText.Render(runner.Name))
 		fmt.Fprintf(&b, "  %-9s SPD %d  STL %d  NRV %d  TLK %d\n", stateText, runner.Speed, runner.Stealth, runner.Nerve, runner.Talk)
 		fmt.Fprintf(&b, "  LOY %d  STR %d  CAP 0/%d\n", runner.Loyalty, runner.Stress, game.MaxJobsPerRunner)
 	}
@@ -160,7 +157,7 @@ func renderMessages(state game.GameState, styles Styles) string {
 
 	var b strings.Builder
 	for _, message := range state.Messages {
-		fmt.Fprintf(&b, "[%02d] %s / %s\n", message.Turn, styles.Accent.Render(message.From), message.Subject)
+		fmt.Fprintf(&b, "[%02d] %s / %s\n", message.Turn, styles.PanelText.Render(message.From), message.Subject)
 		fmt.Fprintf(&b, "     %s\n", message.Body)
 	}
 	return strings.TrimRight(b.String(), "\n")
@@ -168,11 +165,11 @@ func renderMessages(state game.GameState, styles Styles) string {
 
 func renderDetail(state game.GameState, styles Styles) string {
 	lines := []string{
-		styles.Accent.Render("Desk state"),
+		styles.PanelText.Render("Desk state"),
 		fmt.Sprintf("Phase: %s", state.Phase),
 		fmt.Sprintf("Seed: %d", state.RandomSeed),
 		"",
-		styles.Accent.Render("Current focus"),
+		styles.PanelText.Render("Current focus"),
 		"Use tab to inspect panels.",
 		"",
 		styles.Muted.Render("Exact risk math stays off-screen."),

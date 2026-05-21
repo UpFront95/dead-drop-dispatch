@@ -13,6 +13,7 @@ type Styles struct {
 	Status     lipgloss.Style
 	Panel      lipgloss.Style
 	PanelFocus lipgloss.Style
+	PanelText  lipgloss.Style
 	PanelTitle lipgloss.Style
 	Muted      lipgloss.Style
 	Accent     lipgloss.Style
@@ -41,8 +42,9 @@ func darkStyles() Styles {
 		Status:     lipgloss.NewStyle().Foreground(lipgloss.Color("#E8E8F2")).Background(lipgloss.Color("#3A3A44")).Padding(0, 1),
 		Panel:      lipgloss.NewStyle().Foreground(lipgloss.Color("#D8D8E6")).Background(lipgloss.Color("#32323A")).Border(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("#4A4A57")).Padding(0, 1),
 		PanelFocus: lipgloss.NewStyle().Foreground(lipgloss.Color("#E8E8F2")).Background(lipgloss.Color("#32323A")).Border(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("#00D9FF")).Padding(0, 1),
-		PanelTitle: lipgloss.NewStyle().Foreground(lipgloss.Color("#67DFFF")).Bold(true),
-		Muted:      lipgloss.NewStyle().Foreground(lipgloss.Color("#8C8C9E")),
+		PanelText:  lipgloss.NewStyle().Foreground(lipgloss.Color("#D8D8E6")),
+		PanelTitle: lipgloss.NewStyle().Foreground(lipgloss.Color("#D8D8E6")).Bold(true),
+		Muted:      lipgloss.NewStyle().Foreground(lipgloss.Color("#B8B8C8")),
 		Accent:     lipgloss.NewStyle().Foreground(lipgloss.Color("#7EE787")),
 		Warning:    lipgloss.NewStyle().Foreground(lipgloss.Color("#E6C97A")),
 		Critical:   lipgloss.NewStyle().Foreground(lipgloss.Color("#FF6B81")),
@@ -59,7 +61,8 @@ func lightStyles() Styles {
 		Status:     lipgloss.NewStyle().Foreground(lipgloss.Color("#2B2B31")).Background(lipgloss.Color("#B8B8C8")).Padding(0, 1),
 		Panel:      lipgloss.NewStyle().Foreground(lipgloss.Color("#2B2B31")).Background(lipgloss.Color("#D8D8E6")).Border(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("#8C8C9E")).Padding(0, 1),
 		PanelFocus: lipgloss.NewStyle().Foreground(lipgloss.Color("#2B2B31")).Background(lipgloss.Color("#D8D8E6")).Border(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("#0084A3")).Padding(0, 1),
-		PanelTitle: lipgloss.NewStyle().Foreground(lipgloss.Color("#007FA0")).Bold(true),
+		PanelText:  lipgloss.NewStyle().Foreground(lipgloss.Color("#2B2B31")),
+		PanelTitle: lipgloss.NewStyle().Foreground(lipgloss.Color("#2B2B31")).Bold(true),
 		Muted:      lipgloss.NewStyle().Foreground(lipgloss.Color("#5B5B6A")),
 		Accent:     lipgloss.NewStyle().Foreground(lipgloss.Color("#007F4E")),
 		Warning:    lipgloss.NewStyle().Foreground(lipgloss.Color("#8A6500")),
