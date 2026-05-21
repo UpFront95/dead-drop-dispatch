@@ -47,14 +47,14 @@ This plan converts `dead-drop-dispatch-spec.md` into a buildable task list for t
 ## Milestone 0: Project Foundation
 
 - [x] Initialize Go module.
-- [ ] Add Bubble Tea v2 dependency.
-- [ ] Add Lip Gloss v2 dependency.
-- [ ] Add Bubbles v2 dependency.
+- [x] Add Bubble Tea v2 dependency.
+- [x] Add Lip Gloss v2 dependency.
+- [x] Add Bubbles v2 dependency.
 - [x] Create `cmd/ddd/main.go`.
 - [ ] Create initial package layout:
-  - `internal/app`
+  - [x] `internal/app`
   - [x] `internal/game`
-  - `internal/tui`
+  - [x] `internal/tui`
   - [x] `internal/content`
   - `internal/save`
   - `internal/llm`
@@ -64,32 +64,32 @@ This plan converts `dead-drop-dispatch-spec.md` into a buildable task list for t
 
 ## Milestone 1: Terminal Skeleton
 
-- [ ] Implement Bubble Tea app model.
-- [ ] Implement `Init`, `Update`, and `View`.
-- [ ] Handle quit keys: `q`, `ctrl+c`.
-- [ ] Handle window resize messages.
-- [ ] Add dashboard screen state.
-- [ ] Add focus model for panels.
+- [x] Implement Bubble Tea app model.
+- [x] Implement `Init`, `Update`, and `View`.
+- [x] Handle quit keys: `q`, `ctrl+c`.
+- [x] Handle window resize messages.
+- [x] Add dashboard screen state.
+- [x] Add focus model for panels.
 - [ ] Add keyboard navigation:
-  - `tab` / `shift+tab` cycles panels
+  - [x] `tab` / `shift+tab` cycles panels
   - arrows and `hjkl` move selection
   - `enter` confirms
   - `esc` backs out
   - `space` advances or resolves
-  - `?` opens help
-- [ ] Render static dashboard panels:
-  - status bar
-  - city panel
-  - job board
-  - runner roster
-  - message feed
-  - detail pane
-- [ ] Add initial visual style:
-  - thin borders
-  - restrained terminal palette
-  - compact tables
-  - clear focused panel styling
-- [ ] Add smoke test for app initialization.
+  - [x] `?` opens help
+- [x] Render static dashboard panels:
+  - [x] status bar
+  - [x] city panel
+  - [x] job board
+  - [x] runner roster
+  - [x] message feed
+  - [x] detail pane
+- [x] Add initial visual style:
+  - [x] thin borders
+  - [x] restrained terminal palette
+  - [x] compact tables
+  - [x] clear focused panel styling
+- [x] Add smoke test for app initialization.
 
 ## Milestone 2: Core Game State
 
