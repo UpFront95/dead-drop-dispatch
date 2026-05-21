@@ -28,8 +28,8 @@ type DashboardView struct {
 }
 
 func RenderDashboard(view DashboardView) tea.View {
-	width := clamp(view.Width, 80, TargetWidth)
-	height := clamp(view.Height, 24, TargetHeight)
+	width := max(view.Width, 80)
+	height := max(view.Height, 24)
 	styles := view.Styles
 	if styles.Base.GetForeground() == nil {
 		styles = NewStyles()
@@ -37,25 +37,31 @@ func RenderDashboard(view DashboardView) tea.View {
 
 	header := renderHeader(view.State, width, styles)
 	footer := renderFooter(view.ShowHelp, width, styles)
-	bodyHeight := height - lipgloss.Height(header) - lipgloss.Height(footer) - 2
-	if bodyHeight < 18 {
-		bodyHeight = 18
+	bodyHeight := height - lipgloss.Height(header) - lipgloss.Height(footer)
+	if bodyHeight < 20 {
+		bodyHeight = 20
 	}
 
 	gap := 1
 	leftW := 46
-	midW := 34
+	midW := 42
 	rightW := width - leftW - midW - gap*2
 	if rightW < 36 {
 		rightW = 36
 		midW = width - leftW - rightW - gap*2
 	}
 
-	topH := 16
-	bottomH := bodyHeight - topH
+	topH := 14
+	bottomH := 16
+	spacerH := bodyHeight - topH - bottomH
+	if spacerH < 1 {
+		spacerH = 1
+		bottomH = bodyHeight - topH - spacerH
+	}
 	if bottomH < 8 {
 		bottomH = 8
 		topH = bodyHeight - bottomH
+		spacerH = 0
 	}
 
 	city := panel("CITY SECTOR", renderCity(view.State, styles), leftW, topH, view.Focused == focusCity, styles)
@@ -67,7 +73,7 @@ func RenderDashboard(view DashboardView) tea.View {
 
 	top := lipgloss.JoinHorizontal(lipgloss.Top, city, strings.Repeat(" ", gap), runners, strings.Repeat(" ", gap), jobs)
 	bottom := lipgloss.JoinHorizontal(lipgloss.Top, messages, strings.Repeat(" ", gap), detail)
-	body := lipgloss.JoinVertical(lipgloss.Left, top, bottom)
+	body := lipgloss.JoinVertical(lipgloss.Left, top, strings.Repeat("\n", spacerH), bottom)
 
 	rendered := styles.Base.Width(width).Height(height).Render(lipgloss.JoinVertical(lipgloss.Left, header, body, footer))
 	result := tea.NewView(rendered)
@@ -187,16 +193,6 @@ func panel(title string, body string, width int, height int, focused bool, style
 	innerH := max(1, height-frameH)
 	content := styles.PanelTitle.Render(title) + "\n" + styles.Divider.Render(strings.Repeat("─", innerW)) + "\n" + body
 	return style.Width(innerW).Height(innerH).Render(content)
-}
-
-func clamp(value, minValue, maxValue int) int {
-	if value < minValue {
-		return minValue
-	}
-	if value > maxValue {
-		return maxValue
-	}
-	return value
 }
 
 func max(a, b int) int {
