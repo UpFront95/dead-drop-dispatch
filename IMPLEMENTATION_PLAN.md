@@ -163,7 +163,7 @@ This plan converts `dead-drop-dispatch-spec.md` into a buildable task list for t
 
 ## Milestone 4: Job Generation
 
-- [ ] Add ten job templates:
+- [x] Add ten job templates:
   - clinic rush
   - quiet data hand-off
   - witness transfer
@@ -174,15 +174,15 @@ This plan converts `dead-drop-dispatch-spec.md` into a buildable task list for t
   - split route
   - curfew run
   - bad client
-- [ ] Generate jobs from templates.
-- [ ] Assign cargo type, origin, destination, deadline, payout, faction source, and modifiers.
-- [ ] Generate fallback title and client message.
-- [ ] Generate contributing risk factors without exposing exact odds.
-- [ ] Generate two to four route options per job.
-- [ ] Ensure origin and destination are different.
-- [ ] Ensure deadlines fit the seven-night run.
-- [ ] Ensure payouts scale with cargo, distance, urgency, faction pressure, and hidden risk.
-- [ ] Add tests for generated job validity.
+- [x] Generate jobs from templates.
+- [x] Assign cargo type, origin, destination, deadline, payout, faction source, and modifiers.
+- [x] Generate fallback title and client message.
+- [x] Generate contributing risk factors without exposing exact odds.
+- [x] Generate two to four route options per job.
+- [x] Ensure origin and destination are different.
+- [x] Ensure deadlines fit the seven-night run.
+- [x] Ensure payouts scale with cargo, distance, urgency, faction pressure, and hidden risk.
+- [x] Add tests for generated job validity.
 
 ## Milestone 5: Assignment And Bundling
 

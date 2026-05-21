@@ -51,6 +51,9 @@ func TestInitialContentCounts(t *testing.T) {
 	if got, want := len(state.EventLog), 1; got != want {
 		t.Fatalf("event log count = %d, want %d", got, want)
 	}
+	if got, want := len(state.AvailableJobs), game.DefaultJobsPerTurn; got != want {
+		t.Fatalf("available job count = %d, want %d", got, want)
+	}
 }
 
 func TestInitialReferencesAreValid(t *testing.T) {

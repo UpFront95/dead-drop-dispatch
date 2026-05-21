@@ -10,7 +10,7 @@ const (
 )
 
 func InitialGameState(seed int64) game.GameState {
-	return game.NewGameState(game.InitialContent{
+	state := game.NewGameState(game.InitialContent{
 		Districts: Districts(),
 		Runners:   Runners(),
 		Factions:  Factions(),
@@ -25,6 +25,8 @@ func InitialGameState(seed int64) game.GameState {
 			Text: "Dispatch console initialized.",
 		}},
 	}, seed)
+	state.AvailableJobs = game.GenerateJobs(state, JobTemplates(), game.DefaultJobsPerTurn)
+	return state
 }
 
 func Districts() []game.District {

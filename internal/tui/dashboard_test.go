@@ -27,6 +27,8 @@ func TestRenderDashboardTargetSizeContent(t *testing.T) {
 		"DETAIL",
 		"Northline",
 		"Mira Vale",
+		" r",
+		"f:",
 		"Desk is live. City is listening.",
 	} {
 		if !strings.Contains(content, want) {
@@ -40,6 +42,35 @@ func TestRenderDashboardTargetSizeContent(t *testing.T) {
 
 	if got := maxLineWidth(content); got > TargetWidth {
 		t.Fatalf("rendered dashboard width = %d, want <= %d", got, TargetWidth)
+	}
+}
+
+func TestRenderDashboardFocusedJobsFitsTargetSize(t *testing.T) {
+	view := RenderDashboard(DashboardView{
+		State:   content.InitialGameState(42),
+		Width:   TargetWidth,
+		Height:  TargetHeight,
+		Focused: focusJobs,
+		Styles:  NewStyles(),
+	})
+
+	content := view.Content
+	for _, want := range []string{
+		"Route options",
+		"Factors:",
+		"Exact risk stays hidden.",
+	} {
+		if !strings.Contains(content, want) {
+			t.Fatalf("rendered focused jobs dashboard missing %q", want)
+		}
+	}
+
+	if got := lineCount(content); got != TargetHeight {
+		t.Fatalf("rendered focused jobs dashboard height = %d, want %d", got, TargetHeight)
+	}
+
+	if got := maxLineWidth(content); got > TargetWidth {
+		t.Fatalf("rendered focused jobs dashboard width = %d, want <= %d", got, TargetWidth)
 	}
 }
 

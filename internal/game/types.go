@@ -79,6 +79,7 @@ type Job struct {
 	ID            string     `json:"id"`
 	TemplateID    string     `json:"template_id"`
 	Title         string     `json:"title"`
+	ClientMessage string     `json:"client_message"`
 	Cargo         CargoType  `json:"cargo"`
 	Origin        DistrictID `json:"origin"`
 	Destination   DistrictID `json:"destination"`
@@ -88,6 +89,19 @@ type Job struct {
 	Modifiers     []string   `json:"modifiers,omitempty"`
 	RiskFactors   []string   `json:"risk_factors,omitempty"`
 	Routes        []Route    `json:"routes,omitempty"`
+}
+
+type JobTemplate struct {
+	ID              string      `json:"id"`
+	Title           string      `json:"title"`
+	ClientMessage   string      `json:"client_message"`
+	Cargo           CargoType   `json:"cargo"`
+	Faction         FactionID   `json:"faction"`
+	BasePayout      int         `json:"base_payout"`
+	BaseDeadline    int         `json:"base_deadline"`
+	Modifiers       []string    `json:"modifiers,omitempty"`
+	RiskFactors     []string    `json:"risk_factors,omitempty"`
+	PreferredRoutes []RouteType `json:"preferred_routes,omitempty"`
 }
 
 type Route struct {
