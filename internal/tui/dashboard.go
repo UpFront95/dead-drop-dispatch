@@ -12,8 +12,8 @@ import (
 
 const (
 	focusCity = iota
-	focusJobs
 	focusRunners
+	focusJobs
 	focusMessages
 	focusDetail
 )
@@ -43,11 +43,11 @@ func RenderDashboard(view DashboardView) tea.View {
 	}
 
 	gap := 1
-	leftW := 36
-	midW := 48
+	leftW := 46
+	midW := 34
 	rightW := width - leftW - midW - gap*2
-	if rightW < 28 {
-		rightW = 28
+	if rightW < 36 {
+		rightW = 36
 		midW = width - leftW - rightW - gap*2
 	}
 
@@ -59,13 +59,13 @@ func RenderDashboard(view DashboardView) tea.View {
 	}
 
 	city := panel("CITY SECTOR", renderCity(view.State, styles), leftW, topH, view.Focused == focusCity, styles)
-	jobs := panel("JOB BOARD", renderJobs(view.State, styles), midW, topH, view.Focused == focusJobs, styles)
-	runners := panel("RUNNERS", renderRunners(view.State, styles), rightW, topH, view.Focused == focusRunners, styles)
+	runners := panel("RUNNERS", renderRunners(view.State, styles), midW, topH, view.Focused == focusRunners, styles)
+	jobs := panel("JOB BOARD", renderJobs(view.State, styles), rightW, topH, view.Focused == focusJobs, styles)
 
 	messages := panel("MESSAGE FEED", renderMessages(view.State, styles), leftW+midW+gap, bottomH, view.Focused == focusMessages, styles)
 	detail := panel("DETAIL", renderDetail(view.State, styles), rightW, bottomH, view.Focused == focusDetail, styles)
 
-	top := lipgloss.JoinHorizontal(lipgloss.Top, city, strings.Repeat(" ", gap), jobs, strings.Repeat(" ", gap), runners)
+	top := lipgloss.JoinHorizontal(lipgloss.Top, city, strings.Repeat(" ", gap), runners, strings.Repeat(" ", gap), jobs)
 	bottom := lipgloss.JoinHorizontal(lipgloss.Top, messages, strings.Repeat(" ", gap), detail)
 	body := lipgloss.JoinVertical(lipgloss.Left, top, bottom)
 
@@ -102,8 +102,11 @@ func renderFooter(showHelp bool, width int, styles Styles) string {
 func renderCity(state game.GameState, styles Styles) string {
 	var b strings.Builder
 	for _, district := range state.Districts {
-		fmt.Fprintf(&b, "%s\n", styles.Accent.Render(district.Name))
-		fmt.Fprintf(&b, "  surv %d  traffic %d  danger %d  signal %d\n",
+		fmt.Fprintf(&b, "%-22s %s\n",
+			styles.Accent.Render(district.Name),
+			formatFactionControl(district.FactionControl),
+		)
+		fmt.Fprintf(&b, "  SURV %d   TRAF %d   DANG %d   SIG %d\n",
 			district.Surveillance,
 			district.Traffic,
 			district.Danger,
@@ -138,9 +141,9 @@ func renderRunners(state game.GameState, styles Styles) string {
 		if runner.State != game.RunnerReady {
 			stateText = styles.Warning.Render(string(runner.State))
 		}
-		fmt.Fprintf(&b, "%s  %s\n", styles.Accent.Render(runner.Name), stateText)
-		fmt.Fprintf(&b, "  spd %d stl %d nrv %d talk %d\n", runner.Speed, runner.Stealth, runner.Nerve, runner.Talk)
-		fmt.Fprintf(&b, "  loyalty %d stress %d\n", runner.Loyalty, runner.Stress)
+		fmt.Fprintf(&b, "%s\n", styles.Accent.Render(runner.Name))
+		fmt.Fprintf(&b, "  %-9s SPD %d  STL %d  NRV %d  TLK %d\n", stateText, runner.Speed, runner.Stealth, runner.Nerve, runner.Talk)
+		fmt.Fprintf(&b, "  LOY %d  STR %d  CAP 0/%d\n", runner.Loyalty, runner.Stress, game.MaxJobsPerRunner)
 	}
 	return strings.TrimRight(b.String(), "\n")
 }
@@ -201,4 +204,19 @@ func max(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func formatFactionControl(faction game.FactionID) string {
+	switch faction {
+	case "helix_municipal_security":
+		return "HELIX"
+	case "kestrel_dock_union":
+		return "UNION"
+	case "saint_orison_clinic_network":
+		return "CLINIC"
+	case "asterion_systems":
+		return "ASTERION"
+	default:
+		return strings.ToUpper(string(faction))
+	}
 }

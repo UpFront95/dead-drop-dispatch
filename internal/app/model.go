@@ -12,8 +12,8 @@ type Panel int
 
 const (
 	PanelCity Panel = iota
-	PanelJobs
 	PanelRunners
+	PanelJobs
 	PanelMessages
 	PanelDetail
 	panelCount
