@@ -137,7 +137,7 @@ Turn jobs into active work, support compatible bundles, and resolve route outcom
 | [x] | RES-06 | P2 | Produce player-facing explanations using contributing factors rather than exact math. |
 | [x] | RES-07 | P2 | **DONE (2026-06-07).** Made resolver outcome application explicit for credits, heat, runner stress/state/loyalty, faction reputation/suspicion, cargo integrity, and dispatch integrity. |
 | [x] | RES-08 | P2 | Add deterministic logs and fixed-seed resolver tests. |
-| [ ] | RES-09 | P1 | Add structured injury detail to resolver results and logs, including severity, cause, recovery estimate, and short player-facing text tied to route, district, cargo, and complication factors. |
+| [x] | RES-09 | P1 | **DONE (2026-06-07).** Added structured injury detail on job results with severity, cause, recovery estimate, and summary text tied to route type, cargo, detection, complications, and clinic-favor recovery; delivery reports now include the injury detail. |
 
 ## Phase 4 — Complications, Economy, And Turn Loop
 

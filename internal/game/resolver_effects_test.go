@@ -45,9 +45,15 @@ func TestApplyJobResultAppliesOutcomeEffects(t *testing.T) {
 		DispatchIntegrityLoss: FailedJobDispatchIntegrityLoss + CargoDamageDispatchIntegrityLoss,
 		Detection:             true,
 		Injury:                true,
-		CargoDamage:           true,
-		Interception:          true,
-		Summary:               "Runner One returned from Hard Drop: intercepted.",
+		InjuryDetail: &InjuryDetail{
+			Severity:      "serious",
+			Cause:         "checkpoint contact",
+			RecoveryTurns: DefaultInjuryRecoveryTurns,
+			Summary:       "serious injury: checkpoint contact; recovery estimate 2 turns",
+		},
+		CargoDamage:  true,
+		Interception: true,
+		Summary:      "Runner One returned from Hard Drop: intercepted.",
 	}
 
 	applyJobResult(&state, result)
@@ -245,8 +251,14 @@ func TestResultSummaryExplainsDeliveryOutcome(t *testing.T) {
 				RunnerName: "Runner One",
 				Outcome:    OutcomeFailed,
 				Injury:     true,
+				InjuryDetail: &InjuryDetail{
+					Severity:      "serious",
+					Cause:         "witness panic",
+					RecoveryTurns: 2,
+					Summary:       "serious injury: witness panic; recovery estimate 2 turns",
+				},
 			},
-			want: []string{"could not complete Bad Witness", "runner was hurt during the run", "No payout cleared"},
+			want: []string{"could not complete Bad Witness", "serious injury: witness panic", "recovery estimate 2 turns", "No payout cleared"},
 		},
 		{
 			name: "intercepted",
@@ -270,6 +282,42 @@ func TestResultSummaryExplainsDeliveryOutcome(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestInjuryDetailForResultUsesRouteAndRecovery(t *testing.T) {
+	state := GameState{}
+	job := Job{Cargo: CargoDataShard}
+	route := Route{Type: RouteFloodline}
+
+	detail := injuryDetailForResult(state, job, route, OutcomePartial, true, false, ComplicationNone)
+
+	if detail == nil {
+		t.Fatal("injury detail should be present")
+	}
+	if got, want := detail.Severity, "serious"; got != want {
+		t.Fatalf("severity = %q, want %q", got, want)
+	}
+	if got, want := detail.Cause, "floodline impact"; got != want {
+		t.Fatalf("cause = %q, want %q", got, want)
+	}
+	if got, want := detail.RecoveryTurns, DefaultInjuryRecoveryTurns; got != want {
+		t.Fatalf("recovery turns = %d, want %d", got, want)
+	}
+	if !strings.Contains(detail.Summary, "recovery estimate 2 turns") {
+		t.Fatalf("summary = %q, want recovery estimate", detail.Summary)
+	}
+}
+
+func TestInjuryDetailUsesClinicFavorRecovery(t *testing.T) {
+	state := GameState{PurchasedUpgrades: []UpgradeID{UpgradeClinicFavor}}
+	detail := injuryDetailForResult(state, Job{}, Route{Type: RouteServiceTunnels}, OutcomePartial, true, false, ComplicationNone)
+
+	if detail == nil {
+		t.Fatal("injury detail should be present")
+	}
+	if got, want := detail.RecoveryTurns, ClinicFavorInjuryRecoveryTurns; got != want {
+		t.Fatalf("recovery turns = %d, want %d", got, want)
 	}
 }
 
@@ -318,6 +366,50 @@ func TestResolveActiveJobCanProduceComplication(t *testing.T) {
 	}
 	if result.Outcome == "" {
 		t.Fatal("outcome should be explicit")
+	}
+}
+
+func TestResolveActiveJobAddsInjuryDetail(t *testing.T) {
+	state := highComplicationState()
+	active := ActiveJob{
+		JobID:    "job-1",
+		RunnerID: "runner-1",
+		RouteID:  "route-1",
+		Job: Job{
+			ID:          "job-1",
+			Title:       "Floodline Sprint",
+			Cargo:       CargoWitness,
+			Destination: "danger-zone",
+			Payout:      100,
+		},
+		Route: Route{
+			ID:        "route-1",
+			Type:      RouteFloodline,
+			Name:      "Floodline",
+			Districts: []DistrictID{"safe-zone", "danger-zone"},
+			TimeCost:  3,
+		},
+	}
+
+	var result JobResult
+	for seed := int64(1); seed <= 1000; seed++ {
+		result = resolveActiveJob(&state, active, 1, rand.New(rand.NewSource(seed)))
+		if result.Injury {
+			break
+		}
+	}
+
+	if !result.Injury {
+		t.Fatal("expected high-risk job to produce an injury within fixed seed range")
+	}
+	if result.InjuryDetail == nil {
+		t.Fatal("injury detail should be set")
+	}
+	if result.InjuryDetail.RecoveryTurns != DefaultInjuryRecoveryTurns {
+		t.Fatalf("recovery turns = %d, want %d", result.InjuryDetail.RecoveryTurns, DefaultInjuryRecoveryTurns)
+	}
+	if !strings.Contains(result.Summary, result.InjuryDetail.Summary) {
+		t.Fatalf("summary = %q, want injury detail %q", result.Summary, result.InjuryDetail.Summary)
 	}
 }
 

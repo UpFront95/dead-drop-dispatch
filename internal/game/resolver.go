@@ -81,6 +81,7 @@ func resolveActiveJob(state *GameState, active ActiveJob, bundleLoad int, rng *r
 	dispatchIntegrityLoss := resultDispatchIntegrityLoss(outcome, cargoDamage)
 
 	factors := resultFactors(job, route, detection, delay, complication, complicationType, injury, cargoDamage, interception, bundleLoad)
+	injuryDetail := injuryDetailForResult(*state, job, route, outcome, injury, detection, complicationType)
 	result := JobResult{
 		JobID:                 job.ID,
 		JobTitle:              job.Title,
@@ -99,6 +100,7 @@ func resolveActiveJob(state *GameState, active ActiveJob, bundleLoad int, rng *r
 		Complication:          complication,
 		ComplicationType:      complicationType,
 		Injury:                injury,
+		InjuryDetail:          injuryDetail,
 		CargoDamage:           cargoDamage,
 		Interception:          interception,
 		Factors:               factors,
@@ -447,7 +449,9 @@ func resultCauseClauses(result JobResult) []string {
 	if result.CargoDamage {
 		causes = append(causes, "cargo was damaged in transit")
 	}
-	if result.Injury {
+	if result.InjuryDetail != nil {
+		causes = append(causes, result.InjuryDetail.Summary)
+	} else if result.Injury {
 		causes = append(causes, "the runner was hurt during the run")
 	}
 	if result.Detection {
@@ -464,6 +468,55 @@ func resultCauseClauses(result JobResult) []string {
 		causes = append(causes, "the client cut the payout")
 	}
 	return causes
+}
+
+func injuryDetailForResult(state GameState, job Job, route Route, outcome JobOutcome, injury bool, detection bool, complicationType ComplicationType) *InjuryDetail {
+	if !injury {
+		return nil
+	}
+
+	severity := "minor"
+	if outcome == OutcomeFailed || outcome == OutcomeIntercepted || detection || complicationType != ComplicationNone {
+		severity = "serious"
+	}
+	if route.Type == RouteDroneCorridor || route.Type == RouteFloodline || job.Cargo == CargoWitness {
+		severity = "serious"
+	}
+
+	cause := injuryCause(job, route, detection, complicationType)
+	recovery := injuryRecoveryTurns(state)
+	summary := fmt.Sprintf("%s injury: %s; recovery estimate %d turns", severity, cause, recovery)
+	return &InjuryDetail{
+		Severity:      severity,
+		Cause:         cause,
+		RecoveryTurns: recovery,
+		Summary:       summary,
+	}
+}
+
+func injuryCause(job Job, route Route, detection bool, complicationType ComplicationType) string {
+	if complicationType != ComplicationNone {
+		return strings.ReplaceAll(string(complicationType), "_", " ") + " pressure"
+	}
+	if detection {
+		return "checkpoint contact"
+	}
+	if job.Cargo == CargoWitness {
+		return "witness panic"
+	}
+	switch route.Type {
+	case RouteServiceTunnels:
+		return "tunnel fall"
+	case RouteFloodline:
+		return "floodline impact"
+	case RouteDroneCorridor:
+		return "drone corridor scramble"
+	case RouteMarketWeave:
+		return "market crowd crush"
+	case RouteMainArtery:
+		return "traffic breakaway"
+	}
+	return "route accident"
 }
 
 func bundleLoadMap(bundles []Bundle) map[RunnerID]int {

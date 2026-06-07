@@ -311,10 +311,18 @@ type JobResult struct {
 	Complication          bool             `json:"complication"`
 	ComplicationType      ComplicationType `json:"complication_type,omitempty"`
 	Injury                bool             `json:"injury"`
+	InjuryDetail          *InjuryDetail    `json:"injury_detail,omitempty"`
 	CargoDamage           bool             `json:"cargo_damage"`
 	Interception          bool             `json:"interception"`
 	Factors               []string         `json:"factors,omitempty"`
 	Summary               string           `json:"summary"`
+}
+
+type InjuryDetail struct {
+	Severity      string `json:"severity"`
+	Cause         string `json:"cause"`
+	RecoveryTurns int    `json:"recovery_turns"`
+	Summary       string `json:"summary"`
 }
 
 type Complication struct {
