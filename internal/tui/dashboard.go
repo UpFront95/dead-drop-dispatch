@@ -49,7 +49,7 @@ func RenderDashboard(view DashboardView) tea.View {
 		styles = NewStyles()
 	}
 
-	header := renderHeader(view.State, width, styles)
+	header := renderHeader(view, width, styles)
 	tabs := renderTabs(dashboardTabs, view.ActiveTab, width, styles)
 	footer := renderFooter(view.ShowHelp, width, styles)
 	bodyHeight := height - lipgloss.Height(header) - lipgloss.Height(tabs) - lipgloss.Height(footer)
@@ -101,7 +101,7 @@ func renderDashboardBody(view DashboardView, width int, bodyHeight int, styles S
 
 	top := lipgloss.JoinHorizontal(lipgloss.Top, city, strings.Repeat(" ", gap), runners, strings.Repeat(" ", gap), jobs)
 	bottom := lipgloss.JoinHorizontal(lipgloss.Top, messages, strings.Repeat(" ", gap), detail)
-	return lipgloss.JoinVertical(lipgloss.Left, top, blankLines(width, spacerH), bottom)
+	return lipgloss.JoinVertical(lipgloss.Left, top, renderActionStrip(view, width, spacerH, styles), bottom)
 }
 
 func renderTabs(labels []string, active int, width int, styles Styles) string {
@@ -151,7 +151,8 @@ func padLinesRight(value string, width int) string {
 	return strings.Join(lines, "\n")
 }
 
-func renderHeader(state game.GameState, width int, styles Styles) string {
+func renderHeader(view DashboardView, width int, styles Styles) string {
+	state := view.State
 	title := styles.Title.Render("DEAD DROP DISPATCH")
 	status := fmt.Sprintf("NIGHT %d/%d  TURN %d/%d  CRED %04d  HEAT %02d  INTEGRITY %03d",
 		state.Night,
@@ -162,8 +163,145 @@ func renderHeader(state game.GameState, width int, styles Styles) string {
 		state.Heat,
 		state.DispatchIntegrity,
 	)
-	line := lipgloss.JoinHorizontal(lipgloss.Center, title, "  ", styles.Status.Render(status))
+	left := lipgloss.JoinHorizontal(lipgloss.Center, title, "  ", styles.Status.Render(status))
+	prompt := styles.Status.Render(currentActionPrompt(view))
+	space := width - lipgloss.Width(left) - lipgloss.Width(prompt)
+	if space < 2 {
+		line := lipgloss.JoinHorizontal(lipgloss.Center, title, "  ", styles.Status.Render(status))
+		return lipgloss.NewStyle().Width(width).Render(line)
+	}
+	line := lipgloss.JoinHorizontal(lipgloss.Center, left, strings.Repeat(" ", space), prompt)
 	return lipgloss.NewStyle().Width(width).Render(line)
+}
+
+func renderActionStrip(view DashboardView, width int, height int, styles Styles) string {
+	if height <= 0 {
+		return ""
+	}
+	text := compactActionLine(view)
+	line := styles.Help.Width(width).Render(clipText(text, width-2))
+	if height == 1 {
+		return line
+	}
+	return lipgloss.JoinVertical(lipgloss.Left, line, blankLines(width, height-1))
+}
+
+func currentActionPrompt(view DashboardView) string {
+	state := view.State
+	if state.Phase == game.PhaseGameOver {
+		status := game.EvaluateRunStatus(state)
+		if status.State == game.RunWon {
+			return "NEXT run complete"
+		}
+		return "NEXT run lost"
+	}
+	if hasPendingComplication(state) {
+		return "NEXT resolve complication"
+	}
+	if len(state.AcceptedJobs) > 0 {
+		return "NEXT assign runner"
+	}
+	if len(state.ActiveJobs) > 0 && state.Phase == game.PhaseDispatch {
+		return "NEXT resolve runs"
+	}
+	switch state.Phase {
+	case game.PhaseMessages:
+		return "NEXT review messages"
+	case game.PhaseJobs:
+		return "NEXT review jobs"
+	case game.PhaseDispatch:
+		if len(state.AvailableJobs) > 0 {
+			return "NEXT accept job"
+		}
+		return "NEXT await postings"
+	case game.PhaseComplications:
+		return "NEXT resolve complication"
+	case game.PhaseReports:
+		return "NEXT file reports"
+	case game.PhaseCityUpdate:
+		return "NEXT city update"
+	default:
+		return "NEXT dispatch"
+	}
+}
+
+func compactActionLine(view DashboardView) string {
+	state := view.State
+	parts := []string{"ACTION " + currentActionText(view)}
+	job, ok := currentDecisionJob(view)
+	if ok {
+		if len(job.RiskFactors) > 0 {
+			parts = append(parts, "RISK "+formatFactorsShort(job.RiskFactors))
+		}
+		if route, routeOK := currentDecisionRoute(view, job); routeOK {
+			parts = append(parts, "ROUTE "+formatRouteDetail(route))
+		}
+	} else if len(state.LastResults) > 0 {
+		last := state.LastResults[len(state.LastResults)-1]
+		parts = append(parts, fmt.Sprintf("LAST %s: %s", last.JobTitle, last.Outcome))
+	}
+	if view.Notice != "" {
+		parts = append(parts, "NOTE "+view.Notice)
+	}
+	return strings.Join(parts, "  |  ")
+}
+
+func currentActionText(view DashboardView) string {
+	state := view.State
+	if hasPendingComplication(state) {
+		return "resolve pending complication"
+	}
+	if len(state.AcceptedJobs) > 0 {
+		return "select runner and route"
+	}
+	if len(state.ActiveJobs) > 0 && state.Phase == game.PhaseDispatch {
+		return "resolve active runs"
+	}
+	switch state.Phase {
+	case game.PhaseMessages:
+		return "refresh job board"
+	case game.PhaseJobs:
+		return "enter dispatch"
+	case game.PhaseDispatch:
+		if len(state.AvailableJobs) > 0 {
+			return "accept highlighted job"
+		}
+		return "advance dispatch"
+	case game.PhaseReports:
+		return "file reports"
+	case game.PhaseCityUpdate:
+		return "run city update"
+	case game.PhaseGameOver:
+		return "run ended"
+	default:
+		return "review dashboard"
+	}
+}
+
+func currentDecisionJob(view DashboardView) (game.Job, bool) {
+	if len(view.State.AcceptedJobs) > 0 {
+		return view.State.AcceptedJobs[0], true
+	}
+	if len(view.State.AvailableJobs) > 0 {
+		return view.State.AvailableJobs[clampIndex(view.SelectedJobIndex, len(view.State.AvailableJobs))], true
+	}
+	return game.Job{}, false
+}
+
+func currentDecisionRoute(view DashboardView, job game.Job) (game.Route, bool) {
+	if len(job.Routes) == 0 {
+		return game.Route{}, false
+	}
+	return job.Routes[clampIndex(view.SelectedRouteIndex, len(job.Routes))], true
+}
+
+func hasPendingComplication(state game.GameState) bool {
+	for _, complication := range state.Complications {
+		if complication.Status == game.ComplicationPending {
+			return true
+		}
+	}
+	return false
 }
 
 func renderFooter(showHelp bool, width int, styles Styles) string {

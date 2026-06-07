@@ -185,7 +185,7 @@ Promote the dashboard from a display surface into the primary command center for
 | [ ] | TUI-05 | P2 | Add screen-specific key maps. |
 | [ ] | TUI-06 | P1 | Add empty states for no jobs, no messages, and no active assignments. |
 | [ ] | TUI-07 | P2 | Add confirmation prompts for risky actions. |
-| [ ] | TUI-08 | P2 | Add compact risk-factor display and clear current-action prompt. |
+| [x] | TUI-08 | P2 | **DONE (2026-06-07).** Added a right-aligned header `NEXT` chip and a compact center spacer strip showing current action, selected job risk factors, selected route summary, and notices without adding a new panel. |
 | [ ] | TUI-09 | P2 | Add visual indication of bundled jobs in every relevant view. |
 | [ ] | TUI-10 | P1 | Improve panel sizing across narrow and wide terminals. |
 | [ ] | TUI-11 | P1 | Improve help text once the loop input model is final. |
