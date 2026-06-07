@@ -37,10 +37,12 @@ type Model struct {
 	height             int
 	focused            Panel
 	tab                ScreenTab
+	selectedDistrict   int
 	selectedJobIndex   int
 	selectedRunner     int
 	selectedRouteIndex int
 	notice             string
+	showDistrictBrief  bool
 	showHelp           bool
 	styles             tui.Styles
 }
@@ -75,6 +77,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.moveSelection(1)
 		case "enter":
 			m.confirmSelection()
+		case "esc":
+			m.back()
 		case "r":
 			m.cycleRoute()
 		case " ", "space":
@@ -114,10 +118,12 @@ func (m Model) View() tea.View {
 		Height:             m.height,
 		Focused:            int(m.focused),
 		ActiveTab:          int(m.tab),
+		SelectedDistrict:   m.selectedDistrict,
 		SelectedJobIndex:   m.selectedJobIndex,
 		SelectedRunner:     m.selectedRunner,
 		SelectedRouteIndex: m.selectedRouteIndex,
 		Notice:             m.notice,
+		ShowDistrictBrief:  m.showDistrictBrief,
 		ShowHelp:           m.showHelp,
 		Styles:             m.styles,
 	})
@@ -126,6 +132,8 @@ func (m Model) View() tea.View {
 func (m *Model) moveSelection(delta int) {
 	m.notice = ""
 	switch m.focused {
+	case PanelCity:
+		m.selectedDistrict = wrapIndex(m.selectedDistrict+delta, len(m.state.Districts))
 	case PanelJobs:
 		m.selectedJobIndex = wrapIndex(m.selectedJobIndex+delta, len(m.state.AvailableJobs))
 	case PanelRunners:
@@ -137,6 +145,8 @@ func (m *Model) moveSelection(delta int) {
 
 func (m *Model) confirmSelection() {
 	switch m.focused {
+	case PanelCity:
+		m.openDistrictBriefing()
 	case PanelJobs:
 		m.acceptSelectedJob()
 	case PanelRunners:
@@ -144,6 +154,28 @@ func (m *Model) confirmSelection() {
 	default:
 		m.notice = "Focus JOB BOARD to accept, RUNNERS to assign."
 	}
+}
+
+func (m *Model) back() {
+	if m.showDistrictBrief {
+		m.showDistrictBrief = false
+		m.notice = ""
+		return
+	}
+	if m.showHelp {
+		m.showHelp = false
+		return
+	}
+	m.notice = ""
+}
+
+func (m *Model) openDistrictBriefing() {
+	if len(m.state.Districts) == 0 {
+		m.notice = "No district data available."
+		return
+	}
+	m.showDistrictBrief = true
+	m.notice = ""
 }
 
 func (m *Model) acceptSelectedJob() {

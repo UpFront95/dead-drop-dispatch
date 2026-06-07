@@ -24,10 +24,12 @@ type DashboardView struct {
 	Height             int
 	Focused            int
 	ActiveTab          int
+	SelectedDistrict   int
 	SelectedJobIndex   int
 	SelectedRunner     int
 	SelectedRouteIndex int
 	Notice             string
+	ShowDistrictBrief  bool
 	ShowHelp           bool
 	Styles             Styles
 }
@@ -92,7 +94,7 @@ func renderDashboardBody(view DashboardView, width int, bodyHeight int, styles S
 		spacerH = 0
 	}
 
-	city := panel("CITY SECTOR", renderCity(view.State, styles), leftW, topH, view.Focused == focusCity, styles)
+	city := panel("CITY SECTOR", renderCity(view.State, view.SelectedDistrict, view.ShowDistrictBrief, styles), leftW, topH, view.Focused == focusCity, styles)
 	runners := panel("RUNNERS", renderRunners(view.State, view.SelectedRunner, styles), midW, topH, view.Focused == focusRunners, styles)
 	jobs := panel("JOB BOARD", renderJobs(view.State, view.SelectedJobIndex, styles), rightW, topH, view.Focused == focusJobs, styles)
 
@@ -312,12 +314,24 @@ func renderFooter(showHelp bool, width int, styles Styles) string {
 	return styles.Help.Width(width).Render(text)
 }
 
-func renderCity(state game.GameState, styles Styles) string {
+func renderCity(state game.GameState, selected int, briefing bool, styles Styles) string {
+	if len(state.Districts) == 0 {
+		return styles.Muted.Render("No district telemetry.")
+	}
+	selected = clampIndex(selected, len(state.Districts))
+	if briefing {
+		return renderDistrictBriefing(state, state.Districts[selected], styles)
+	}
+
 	var b strings.Builder
-	for _, district := range state.Districts {
-		name := styles.Accent.Width(25).Render(district.Name)
+	for i, district := range state.Districts {
+		marker := " "
+		if i == selected {
+			marker = ">"
+		}
+		name := styles.Accent.Width(24).Render(clipText(district.Name, 24))
 		faction := styles.InlineCode.Width(9).Align(lipgloss.Right).Render(formatFactionControl(district.FactionControl))
-		fmt.Fprintf(&b, "%s%s%s\n", name, styles.PanelText.Render(" "), faction)
+		fmt.Fprintf(&b, "%s%s%s%s\n", styles.PanelText.Render(marker), name, styles.PanelText.Render(" "), faction)
 		fmt.Fprintln(&b, styles.PanelText.Render(fmt.Sprintf("  SURV %d   TRAF %d   DNGR %d   SGNL %d",
 			district.Surveillance,
 			district.Traffic,
@@ -326,6 +340,29 @@ func renderCity(state game.GameState, styles Styles) string {
 		)))
 	}
 	return strings.TrimRight(b.String(), "\n")
+}
+
+func renderDistrictBriefing(state game.GameState, district game.District, styles Styles) string {
+	lines := []string{
+		styles.Accent.Render(district.Name),
+		styles.Muted.Render(clipText(district.Description, 36)),
+		styles.PanelText.Render(" "),
+		styles.PanelText.Render(fmt.Sprintf("Control: %s", formatFactionControl(district.FactionControl))),
+		styles.PanelText.Render(fmt.Sprintf("SURV %d  TRAF %d  DNGR %d  SGNL %d",
+			district.Surveillance,
+			district.Traffic,
+			district.Danger,
+			district.SignalQuality,
+		)),
+		styles.PanelText.Render(" "),
+		styles.Accent.Render("Briefing"),
+		styles.PanelText.Render("Pressure: " + districtPressureSummary(district)),
+		styles.PanelText.Render("Signal: " + districtSignalSummary(district)),
+		styles.PanelText.Render(fmt.Sprintf("Jobs touch district: %d", districtJobCount(state, district.ID))),
+		styles.PanelText.Render(" "),
+		styles.Muted.Render("esc returns to sector list."),
+	}
+	return strings.Join(lines, "\n")
 }
 
 func renderJobs(state game.GameState, selected int, styles Styles) string {
@@ -689,6 +726,54 @@ func formatFactorsShort(factors []string) string {
 		short = append(short, shortFactor(factor))
 	}
 	return strings.Join(short, ", ")
+}
+
+func districtPressureSummary(district game.District) string {
+	pressure := []string{}
+	if district.Surveillance >= 4 {
+		pressure = append(pressure, "watched")
+	}
+	if district.Traffic >= 4 {
+		pressure = append(pressure, "crowded")
+	}
+	if district.Danger >= 4 {
+		pressure = append(pressure, "volatile")
+	}
+	if len(pressure) == 0 {
+		return "manageable"
+	}
+	return strings.Join(pressure, ", ")
+}
+
+func districtSignalSummary(district game.District) string {
+	switch {
+	case district.SignalQuality >= 4:
+		return "clean comms"
+	case district.SignalQuality <= 2:
+		return "weak comms"
+	default:
+		return "patchy but usable"
+	}
+}
+
+func districtJobCount(state game.GameState, districtID game.DistrictID) int {
+	count := 0
+	for _, job := range state.AvailableJobs {
+		if job.Origin == districtID || job.Destination == districtID {
+			count++
+		}
+	}
+	for _, job := range state.AcceptedJobs {
+		if job.Origin == districtID || job.Destination == districtID {
+			count++
+		}
+	}
+	for _, active := range state.ActiveJobs {
+		if active.Job.Origin == districtID || active.Job.Destination == districtID {
+			count++
+		}
+	}
+	return count
 }
 
 func formatRouteDetail(route game.Route) string {

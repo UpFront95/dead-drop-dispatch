@@ -68,6 +68,32 @@ func TestModelTabKeyStillCyclesPanelFocus(t *testing.T) {
 	}
 }
 
+func TestModelOpensAndClosesDistrictBriefing(t *testing.T) {
+	model := New(99)
+	model.focused = PanelCity
+
+	updated, _ := model.Update(keyPress("down"))
+	model = updated.(Model)
+	if model.selectedDistrict != 1 {
+		t.Fatalf("selected district = %d, want 1", model.selectedDistrict)
+	}
+
+	updated, _ = model.Update(keyPress("enter"))
+	model = updated.(Model)
+	if !model.showDistrictBrief {
+		t.Fatal("district briefing should open")
+	}
+
+	updated, _ = model.Update(keyPress("esc"))
+	model = updated.(Model)
+	if model.showDistrictBrief {
+		t.Fatal("district briefing should close on esc")
+	}
+	if model.selectedDistrict != 1 {
+		t.Fatalf("selected district after close = %d, want 1", model.selectedDistrict)
+	}
+}
+
 func TestModelAcceptsAndAssignsJobFromDashboard(t *testing.T) {
 	model := New(99)
 	model.focused = PanelJobs

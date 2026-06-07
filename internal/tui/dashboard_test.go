@@ -34,6 +34,7 @@ func TestRenderDashboardTargetSizeContent(t *testing.T) {
 		"ACTION accept highlighted job",
 		"RISK",
 		"ROUTE",
+		">Northline",
 		"Northline",
 		"Ashgate Yard",
 		"Mira Vale",
@@ -52,6 +53,43 @@ func TestRenderDashboardTargetSizeContent(t *testing.T) {
 
 	if got := maxLineWidth(content); got > TargetWidth {
 		t.Fatalf("rendered dashboard width = %d, want <= %d", got, TargetWidth)
+	}
+}
+
+func TestRenderDashboardDistrictBriefingStaysInCityPanel(t *testing.T) {
+	view := RenderDashboard(DashboardView{
+		State:             content.InitialGameState(42),
+		Width:             TargetWidth,
+		Height:            TargetHeight,
+		Focused:           focusCity,
+		SelectedDistrict:  1,
+		ShowDistrictBrief: true,
+		Styles:            NewStyles(),
+	})
+
+	content := ansi.Strip(view.Content)
+	for _, want := range []string{
+		"CITY SECTOR",
+		"Floodglass",
+		"Low streets, tunnels",
+		"Control: CLINIC",
+		"SURV 2  TRAF 4  DNGR 3  SGNL 2",
+		"Pressure: crowded",
+		"Signal: weak comms",
+		"Jobs touch district:",
+		"esc returns to sector list.",
+	} {
+		if !strings.Contains(content, want) {
+			t.Fatalf("rendered district briefing missing %q", want)
+		}
+	}
+
+	if got := lineCount(content); got != TargetHeight {
+		t.Fatalf("rendered district briefing height = %d, want %d", got, TargetHeight)
+	}
+
+	if got := maxLineWidth(content); got > TargetWidth {
+		t.Fatalf("rendered district briefing width = %d, want <= %d", got, TargetWidth)
 	}
 }
 
