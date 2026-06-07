@@ -32,6 +32,31 @@ func TestAdvanceTurnPhaseResolvesActiveJobsAndMovesToReports(t *testing.T) {
 	}
 }
 
+func TestAdvanceTurnPhaseResolvesWhenAllRunnersAreOnJobs(t *testing.T) {
+	state := assignedState(t, 42)
+	for i := range state.Runners {
+		state.Runners[i].State = game.RunnerOnJob
+	}
+
+	advance := game.AdvanceTurnPhase(&state)
+
+	if got, want := advance.To, game.PhaseReports; got != want {
+		t.Fatalf("to phase = %q, want %q", got, want)
+	}
+	if got, want := advance.Status.State, game.RunInProgress; got != want {
+		t.Fatalf("run state = %q, want %q", got, want)
+	}
+	if got, want := len(advance.Results), 1; got != want {
+		t.Fatalf("results = %d, want %d", got, want)
+	}
+	if got, want := len(state.ActiveJobs), 0; got != want {
+		t.Fatalf("active jobs = %d, want %d", got, want)
+	}
+	if got, want := state.Phase, game.PhaseReports; got != want {
+		t.Fatalf("state phase = %q, want %q", got, want)
+	}
+}
+
 func TestAdvanceTurnPhasePausesForPendingComplications(t *testing.T) {
 	state := content.InitialGameState(42)
 	state.Complications = []game.Complication{{

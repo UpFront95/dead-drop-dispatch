@@ -169,6 +169,23 @@ func TestEvaluateRunStatusDetectsRosterLoss(t *testing.T) {
 	assertRunLost(t, status, game.RunEndRosterLoss)
 }
 
+func TestEvaluateRunStatusDoesNotTreatRunnersOnJobsAsRosterLoss(t *testing.T) {
+	state := content.InitialGameState(42)
+	for i := range state.Runners {
+		state.Runners[i].State = game.RunnerOnJob
+	}
+	state.ActiveJobs = []game.ActiveJob{{JobID: "active"}}
+
+	status := game.EvaluateRunStatus(state)
+
+	if status.State != game.RunInProgress {
+		t.Fatalf("state = %q, want %q", status.State, game.RunInProgress)
+	}
+	if status.Reason != game.RunEndNone {
+		t.Fatalf("reason = %q, want %q", status.Reason, game.RunEndNone)
+	}
+}
+
 func TestEvaluateRunStatusDetectsFactionLockout(t *testing.T) {
 	state := content.InitialGameState(42)
 	for i := 0; i < game.FactionLockoutCount; i++ {

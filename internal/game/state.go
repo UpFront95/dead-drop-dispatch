@@ -101,7 +101,7 @@ func EvaluateRunStatus(state GameState) RunStatus {
 	if state.DispatchIntegrity <= DispatchIntegrityFailure {
 		return lostStatus(RunEndCollapse, "Dispatch integrity collapsed.")
 	}
-	if allRunnersUnavailable(state.Runners) {
+	if allRunnersOutOfRun(state.Runners) {
 		return lostStatus(RunEndRosterLoss, "No runners are available for work.")
 	}
 	if hostileFactionCount(state.Factions) >= FactionLockoutCount {
@@ -136,12 +136,12 @@ func runComplete(state GameState) bool {
 	return state.Night > state.RunNights || (state.Night == state.RunNights && state.Turn > state.TurnsPerNight)
 }
 
-func allRunnersUnavailable(runners []Runner) bool {
+func allRunnersOutOfRun(runners []Runner) bool {
 	if len(runners) == 0 {
 		return true
 	}
 	for _, runner := range runners {
-		if runner.State == RunnerReady {
+		if runner.State == RunnerReady || runner.State == RunnerOnJob {
 			return false
 		}
 	}
