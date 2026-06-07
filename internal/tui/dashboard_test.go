@@ -72,16 +72,19 @@ func TestRenderDashboardDistrictBriefingStaysInCityPanel(t *testing.T) {
 		"CITY SECTOR",
 		"Floodglass",
 		"Low streets, tunnels",
+		"and illegal clinics.",
 		"Control: CLINIC",
 		"SURV 2  TRAF 4  DNGR 3  SGNL 2",
 		"Pressure: crowded",
-		"Signal: weak comms",
 		"Jobs touch district:",
 		"esc returns to sector list.",
 	} {
 		if !strings.Contains(content, want) {
 			t.Fatalf("rendered district briefing missing %q", want)
 		}
+	}
+	if strings.Contains(content, "Signal: weak comms") {
+		t.Fatal("district briefing should not repeat signal summary")
 	}
 
 	if got := lineCount(content); got != TargetHeight {

@@ -345,7 +345,11 @@ func renderCity(state game.GameState, selected int, briefing bool, styles Styles
 func renderDistrictBriefing(state game.GameState, district game.District, styles Styles) string {
 	lines := []string{
 		styles.Accent.Render(district.Name),
-		styles.Muted.Render(clipText(district.Description, 36)),
+	}
+	for _, line := range wrapText(district.Description, 36, 2) {
+		lines = append(lines, styles.Muted.Render(line))
+	}
+	lines = append(lines,
 		styles.PanelText.Render(" "),
 		styles.PanelText.Render(fmt.Sprintf("Control: %s", formatFactionControl(district.FactionControl))),
 		styles.PanelText.Render(fmt.Sprintf("SURV %d  TRAF %d  DNGR %d  SGNL %d",
@@ -356,12 +360,11 @@ func renderDistrictBriefing(state game.GameState, district game.District, styles
 		)),
 		styles.PanelText.Render(" "),
 		styles.Accent.Render("Briefing"),
-		styles.PanelText.Render("Pressure: " + districtPressureSummary(district)),
-		styles.PanelText.Render("Signal: " + districtSignalSummary(district)),
+		styles.PanelText.Render("Pressure: "+districtPressureSummary(district)),
 		styles.PanelText.Render(fmt.Sprintf("Jobs touch district: %d", districtJobCount(state, district.ID))),
 		styles.PanelText.Render(" "),
 		styles.Muted.Render("esc returns to sector list."),
-	}
+	)
 	return strings.Join(lines, "\n")
 }
 
@@ -792,6 +795,38 @@ func clipText(value string, width int) string {
 		return value[:0]
 	}
 	return value[:width-1] + "…"
+}
+
+func wrapText(value string, width int, maxLines int) []string {
+	if maxLines <= 0 {
+		return nil
+	}
+	words := strings.Fields(value)
+	if len(words) == 0 {
+		return []string{""}
+	}
+
+	lines := []string{}
+	current := ""
+	for _, word := range words {
+		next := word
+		if current != "" {
+			next = current + " " + word
+		}
+		if lipgloss.Width(next) <= width {
+			current = next
+			continue
+		}
+		lines = append(lines, clipText(current, width))
+		current = word
+		if len(lines) == maxLines {
+			return lines
+		}
+	}
+	if current != "" && len(lines) < maxLines {
+		lines = append(lines, clipText(current, width))
+	}
+	return lines
 }
 
 func max(a, b int) int {
