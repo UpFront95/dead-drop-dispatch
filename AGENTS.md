@@ -37,6 +37,8 @@ Use fixed seeds for deterministic content tests. Avoid tests that depend on term
 
 Recent commits use short imperative subjects, such as `Add deterministic job generation` and `Fix dashboard panel sizing`. Follow that style: one clear sentence, present tense, no trailing period.
 
+Commit and push after each distinct completed task or coherent checkpoint. Keep commits scoped to the task just completed, run relevant validation first, and leave unrelated local changes out of the commit unless the user explicitly asks to include them.
+
 Pull requests should include a brief summary, the gameplay or UI behavior changed, and the test command run. Include screenshots or terminal captures for visible TUI layout changes. Link related plan/spec items when applicable, especially milestones in `IMPLEMENTATION_PLAN.md`.
 
 ## Agent-Specific Instructions
