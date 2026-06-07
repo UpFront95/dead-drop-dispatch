@@ -19,12 +19,26 @@ const (
 )
 
 type DashboardView struct {
-	State    game.GameState
-	Width    int
-	Height   int
-	Focused  int
-	ShowHelp bool
-	Styles   Styles
+	State              game.GameState
+	Width              int
+	Height             int
+	Focused            int
+	ActiveTab          int
+	SelectedJobIndex   int
+	SelectedRunner     int
+	SelectedRouteIndex int
+	Notice             string
+	ShowHelp           bool
+	Styles             Styles
+}
+
+var dashboardTabs = []string{
+	"DASHBOARD",
+	"JOBS",
+	"ROUTING",
+	"RUNNERS",
+	"EQUIPMENT",
+	"HELP",
 }
 
 func RenderDashboard(view DashboardView) tea.View {
@@ -36,15 +50,29 @@ func RenderDashboard(view DashboardView) tea.View {
 	}
 
 	header := renderHeader(view.State, width, styles)
+	tabs := renderTabs(dashboardTabs, view.ActiveTab, width, styles)
 	footer := renderFooter(view.ShowHelp, width, styles)
-	bodyHeight := height - lipgloss.Height(header) - lipgloss.Height(footer)
+	bodyHeight := height - lipgloss.Height(header) - lipgloss.Height(tabs) - lipgloss.Height(footer)
 	if bodyHeight < 20 {
 		bodyHeight = 20
 	}
 
+	body := blankLines(width, bodyHeight)
+	if view.ActiveTab == 0 {
+		body = renderDashboardBody(view, width, bodyHeight, styles)
+	}
+
+	rendered := styles.Base.Width(width).Height(height).Render(lipgloss.JoinVertical(lipgloss.Left, header, tabs, body, footer))
+	result := tea.NewView(rendered)
+	result.AltScreen = true
+	result.WindowTitle = "Dead Drop Dispatch"
+	return result
+}
+
+func renderDashboardBody(view DashboardView, width int, bodyHeight int, styles Styles) string {
 	gap := 1
-	leftW := 46
-	midW := 42
+	leftW := 40
+	midW := 48
 	rightW := width - leftW - midW - gap*2
 	if rightW < 36 {
 		rightW = 36
@@ -65,21 +93,62 @@ func RenderDashboard(view DashboardView) tea.View {
 	}
 
 	city := panel("CITY SECTOR", renderCity(view.State, styles), leftW, topH, view.Focused == focusCity, styles)
-	runners := panel("RUNNERS", renderRunners(view.State, styles), midW, topH, view.Focused == focusRunners, styles)
-	jobs := panel("JOB BOARD", renderJobs(view.State, styles), rightW, topH, view.Focused == focusJobs, styles)
+	runners := panel("RUNNERS", renderRunners(view.State, view.SelectedRunner, styles), midW, topH, view.Focused == focusRunners, styles)
+	jobs := panel("JOB BOARD", renderJobs(view.State, view.SelectedJobIndex, styles), rightW, topH, view.Focused == focusJobs, styles)
 
 	messages := panel("MESSAGE FEED", renderMessages(view.State, styles), leftW+midW+gap, bottomH, view.Focused == focusMessages, styles)
-	detail := panel("DETAIL", renderDetail(view.State, view.Focused, styles), rightW, bottomH, view.Focused == focusDetail, styles)
+	detail := panel("DETAIL", renderDetail(view.State, view.Focused, view.SelectedJobIndex, view.SelectedRunner, view.SelectedRouteIndex, view.Notice, styles), rightW, bottomH, view.Focused == focusDetail, styles)
 
 	top := lipgloss.JoinHorizontal(lipgloss.Top, city, strings.Repeat(" ", gap), runners, strings.Repeat(" ", gap), jobs)
 	bottom := lipgloss.JoinHorizontal(lipgloss.Top, messages, strings.Repeat(" ", gap), detail)
-	body := lipgloss.JoinVertical(lipgloss.Left, top, blankLines(width, spacerH), bottom)
+	return lipgloss.JoinVertical(lipgloss.Left, top, blankLines(width, spacerH), bottom)
+}
 
-	rendered := styles.Base.Width(width).Height(height).Render(lipgloss.JoinVertical(lipgloss.Left, header, body, footer))
-	result := tea.NewView(rendered)
-	result.AltScreen = true
-	result.WindowTitle = "Dead Drop Dispatch"
-	return result
+func renderTabs(labels []string, active int, width int, styles Styles) string {
+	if len(labels) == 0 {
+		return ""
+	}
+	if active < 0 || active >= len(labels) {
+		active = 0
+	}
+
+	renderedTabs := make([]string, 0, len(labels))
+	for i, label := range labels {
+		style := styles.Tab
+		if i == active {
+			style = styles.TabActive
+		}
+		border, _, _, _, _ := style.GetBorder()
+		isFirst, isLast, isActive := i == 0, i == len(labels)-1, i == active
+		if isFirst && isActive {
+			border.BottomLeft = "│"
+		} else if isFirst && !isActive {
+			border.BottomLeft = "├"
+		} else if isLast && isActive {
+			border.BottomRight = "│"
+		} else if isLast && !isActive {
+			border.BottomRight = "┤"
+		}
+		style = style.Border(border)
+		renderedTabs = append(renderedTabs, style.Render(label))
+	}
+
+	row := lipgloss.JoinHorizontal(lipgloss.Top, renderedTabs...)
+	if lipgloss.Width(row) > width {
+		row = lipgloss.NewStyle().MaxWidth(width).Render(row)
+	}
+	return padLinesRight(row, width)
+}
+
+func padLinesRight(value string, width int) string {
+	lines := strings.Split(value, "\n")
+	for i, line := range lines {
+		lineWidth := lipgloss.Width(line)
+		if lineWidth < width {
+			lines[i] = line + strings.Repeat(" ", width-lineWidth)
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 func renderHeader(state game.GameState, width int, styles Styles) string {
@@ -98,9 +167,9 @@ func renderHeader(state game.GameState, width int, styles Styles) string {
 }
 
 func renderFooter(showHelp bool, width int, styles Styles) string {
-	text := "tab focus   ? help   q quit"
+	text := "tab focus   [ ] tabs   j/k select   enter accept/assign   r route   space resolve   ? more   q quit"
 	if showHelp {
-		text = "tab/shift+tab cycle panels   arrows/hjkl pending   enter pending   space pending   ? hide help   q quit"
+		text = "shift+tab prev panel   1-6 jump tabs   arrows move   [ and ] tabs   enter accept/assign   r route   space resolve   ? less"
 	}
 	return styles.Help.Width(width).Render(text)
 }
@@ -111,7 +180,7 @@ func renderCity(state game.GameState, styles Styles) string {
 		name := styles.Accent.Width(25).Render(district.Name)
 		faction := styles.InlineCode.Width(9).Align(lipgloss.Right).Render(formatFactionControl(district.FactionControl))
 		fmt.Fprintf(&b, "%s%s%s\n", name, styles.PanelText.Render(" "), faction)
-		fmt.Fprintln(&b, styles.PanelText.Render(fmt.Sprintf("  SURV %d   TRAF %d   DANG %d   SIG %d",
+		fmt.Fprintln(&b, styles.PanelText.Render(fmt.Sprintf("  SURV %d   TRAF %d   DNGR %d   SGNL %d",
 			district.Surveillance,
 			district.Traffic,
 			district.Danger,
@@ -121,24 +190,35 @@ func renderCity(state game.GameState, styles Styles) string {
 	return strings.TrimRight(b.String(), "\n")
 }
 
-func renderJobs(state game.GameState, styles Styles) string {
+func renderJobs(state game.GameState, selected int, styles Styles) string {
 	if len(state.AvailableJobs) == 0 {
-		return strings.Join([]string{
+		lines := []string{
 			styles.Muted.Render("No contracts posted."),
 			styles.PanelText.Render(" "),
 			styles.PanelText.Render("Dispatch wire is quiet."),
-			styles.PanelText.Render("Job generation comes next."),
-		}, "\n")
+		}
+		if len(state.AcceptedJobs) > 0 {
+			lines = append(lines, styles.PanelText.Render(" "), styles.Accent.Render("Accepted"))
+			for _, job := range state.AcceptedJobs {
+				lines = append(lines, styles.PanelText.Render("  "+job.Title))
+			}
+		}
+		return strings.Join(lines, "\n")
 	}
 
 	var b strings.Builder
 	districts := districtNames(state)
-	for _, job := range state.AvailableJobs {
+	for i, job := range state.AvailableJobs {
 		factor := "none"
 		if len(job.RiskFactors) > 0 {
 			factor = job.RiskFactors[0]
 		}
-		fmt.Fprintf(&b, "%s%s\n",
+		marker := " "
+		if i == clampIndex(selected, len(state.AvailableJobs)) {
+			marker = ">"
+		}
+		fmt.Fprintf(&b, "%s%s%s\n",
+			styles.PanelText.Render(marker),
 			styles.Accent.Render(job.Title),
 			styles.PanelText.Render(fmt.Sprintf("  %s", formatCargo(job.Cargo))),
 		)
@@ -155,18 +235,32 @@ func renderJobs(state game.GameState, styles Styles) string {
 			fmt.Fprintln(&b, styles.PanelText.Render(" "))
 		}
 	}
+	if len(state.AcceptedJobs) > 0 {
+		fmt.Fprintln(&b, styles.PanelText.Render(" "))
+		fmt.Fprintln(&b, styles.Accent.Render("Accepted"))
+		for _, job := range state.AcceptedJobs {
+			fmt.Fprintln(&b, styles.PanelText.Render("  "+job.Title))
+		}
+	}
 	return strings.TrimRight(b.String(), "\n")
 }
 
-func renderDetail(state game.GameState, focused int, styles Styles) string {
+func renderDetail(state game.GameState, focused int, selectedJob int, selectedRunner int, selectedRoute int, notice string, styles Styles) string {
+	if len(state.AcceptedJobs) > 0 {
+		return renderAcceptedJobDetail(state, state.AcceptedJobs[0], selectedRoute, notice, styles)
+	}
 	if len(state.AvailableJobs) > 0 && (focused == focusJobs || focused == focusDetail) {
-		return renderJobDetail(state, state.AvailableJobs[0], styles)
+		return renderJobDetail(state, state.AvailableJobs[clampIndex(selectedJob, len(state.AvailableJobs))], styles)
+	}
+	if len(state.Runners) > 0 && focused == focusRunners {
+		return renderRunnerDetail(state, state.Runners[clampIndex(selectedRunner, len(state.Runners))], notice, styles)
 	}
 
 	lines := []string{
 		styles.Accent.Render("Desk state"),
 		styles.PanelText.Render(fmt.Sprintf("Phase: %s", state.Phase)),
 		styles.PanelText.Render(fmt.Sprintf("Seed: %d", state.RandomSeed)),
+		styles.PanelText.Render(fmt.Sprintf("Active runs: %d", len(state.ActiveJobs))),
 		styles.PanelText.Render(" "),
 		styles.Accent.Render("Current focus"),
 		styles.PanelText.Render("Use tab to inspect panels."),
@@ -174,6 +268,39 @@ func renderDetail(state game.GameState, focused int, styles Styles) string {
 		styles.Muted.Render("Exact risk math stays off-screen."),
 		styles.Muted.Render("Route factors will appear here."),
 	}
+	if notice != "" {
+		lines = append([]string{styles.Warning.Render(notice), styles.PanelText.Render(" ")}, lines...)
+	}
+	if len(state.LastResults) > 0 {
+		lines = append(lines, styles.PanelText.Render(" "), styles.Accent.Render("Last results"))
+		for _, result := range state.LastResults {
+			lines = append(lines, styles.PanelText.Render(fmt.Sprintf("  %s: %s", result.JobTitle, result.Outcome)))
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+func renderAcceptedJobDetail(state game.GameState, job game.Job, selectedRoute int, notice string, styles Styles) string {
+	lines := []string{}
+	if notice != "" {
+		lines = append(lines, styles.Warning.Render(notice), styles.PanelText.Render(" "))
+	}
+	lines = append(lines,
+		styles.Accent.Render("Pending assignment"),
+		styles.PanelText.Render(job.Title),
+		styles.PanelText.Render(formatCargo(job.Cargo)),
+		styles.PanelText.Render(" "),
+		styles.Accent.Render("Route"),
+	)
+	routeIndex := clampIndex(selectedRoute, len(job.Routes))
+	for i, route := range job.Routes {
+		marker := " "
+		if i == routeIndex {
+			marker = ">"
+		}
+		lines = append(lines, styles.PanelText.Render(marker+" "+formatRouteDetail(route)))
+	}
+	lines = append(lines, styles.PanelText.Render(" "), styles.Muted.Render("Select a runner, press enter."))
 	return strings.Join(lines, "\n")
 }
 
@@ -196,20 +323,62 @@ func renderJobDetail(state game.GameState, job game.Job, styles Styles) string {
 	return strings.Join(lines, "\n")
 }
 
-func renderRunners(state game.GameState, styles Styles) string {
+func renderRunnerDetail(state game.GameState, runner game.Runner, notice string, styles Styles) string {
+	lines := []string{}
+	if notice != "" {
+		lines = append(lines, styles.Warning.Render(notice), styles.PanelText.Render(" "))
+	}
+	lines = append(lines,
+		styles.Accent.Render(runner.Name),
+		styles.PanelText.Render(runner.Style),
+		styles.PanelText.Render(fmt.Sprintf("SPD %d  STL %d  NRV %d  TLK %d", runner.Speed, runner.Stealth, runner.Nerve, runner.Talk)),
+		styles.PanelText.Render(fmt.Sprintf("LOY %d  STR %d  CAP %d/%d", runner.Loyalty, runner.Stress, runnerLoad(state, runner.ID), game.MaxJobsPerRunner)),
+		styles.PanelText.Render(" "),
+	)
+
+	bundle := runnerBundle(state, runner.ID)
+	if len(bundle.Jobs) == 0 {
+		lines = append(lines, styles.Muted.Render("No active bundle."))
+		return strings.Join(lines, "\n")
+	}
+
+	lines = append(lines, styles.Accent.Render("Active bundle"))
+	for _, active := range bundle.Jobs {
+		lines = append(lines, styles.PanelText.Render("  "+active.Job.Title))
+		lines = append(lines, styles.Muted.Render("  "+formatRouteDetail(active.Route)))
+	}
+	if len(bundle.Penalties) > 0 {
+		lines = append(lines, styles.PanelText.Render(" "), styles.Accent.Render("Bundle pressure"))
+		for _, penalty := range bundle.Penalties {
+			lines = append(lines, styles.Warning.Render("  "+penalty))
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+func renderRunners(state game.GameState, selected int, styles Styles) string {
 	var b strings.Builder
-	for _, runner := range state.Runners {
+	const runnerNameWidth = 17
+	for i, runner := range state.Runners {
 		stateText := styles.Accent.Width(9).Render(string(runner.State))
 		if runner.State != game.RunnerReady {
 			stateText = styles.Warning.Width(9).Render(string(runner.State))
 		}
-		fmt.Fprintf(&b, "%s\n", styles.Accent.Render(runner.Name))
+		marker := " "
+		if i == clampIndex(selected, len(state.Runners)) {
+			marker = ">"
+		}
 		fmt.Fprintf(&b, "%s%s%s\n",
-			styles.PanelText.Render("  "),
+			styles.PanelText.Render(marker),
+			styles.Accent.Width(runnerNameWidth).Render(clipText(runner.Name, runnerNameWidth)),
 			stateText,
-			styles.PanelText.Render(fmt.Sprintf(" SPD %d  STL %d  NRV %d  TLK %d", runner.Speed, runner.Stealth, runner.Nerve, runner.Talk)),
 		)
-		fmt.Fprintln(&b, styles.PanelText.Render(fmt.Sprintf("  LOY %d  STR %d  CAP 0/%d", runner.Loyalty, runner.Stress, game.MaxJobsPerRunner)))
+		fmt.Fprintln(&b, styles.PanelText.Render(fmt.Sprintf("  SPD %-2d STL %-2d NRV %-2d TLK %-2d", runner.Speed, runner.Stealth, runner.Nerve, runner.Talk)))
+		fmt.Fprintln(&b, styles.PanelText.Render(fmt.Sprintf("  LOY %-2d STR %-2d CAP %d/%d", runner.Loyalty, runner.Stress, runnerLoad(state, runner.ID), game.MaxJobsPerRunner)))
+		bundle := runnerBundle(state, runner.ID)
+		for _, active := range bundle.Jobs {
+			fmt.Fprintln(&b, styles.Muted.Render("  - "+clipText(active.Job.Title, 34)))
+		}
 	}
 	return strings.TrimRight(b.String(), "\n")
 }
@@ -327,6 +496,38 @@ func max(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func clampIndex(index int, length int) int {
+	if length <= 0 {
+		return 0
+	}
+	if index < 0 {
+		return 0
+	}
+	if index >= length {
+		return length - 1
+	}
+	return index
+}
+
+func runnerLoad(state game.GameState, runnerID game.RunnerID) int {
+	count := 0
+	for _, active := range state.ActiveJobs {
+		if active.RunnerID == runnerID {
+			count++
+		}
+	}
+	return count
+}
+
+func runnerBundle(state game.GameState, runnerID game.RunnerID) game.Bundle {
+	for _, bundle := range state.Bundles {
+		if bundle.RunnerID == runnerID {
+			return bundle
+		}
+	}
+	return game.Bundle{}
 }
 
 func blankLines(width int, height int) string {

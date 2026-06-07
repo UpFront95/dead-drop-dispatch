@@ -11,9 +11,10 @@ const (
 
 func InitialGameState(seed int64) game.GameState {
 	state := game.NewGameState(game.InitialContent{
-		Districts: Districts(),
-		Runners:   Runners(),
-		Factions:  Factions(),
+		Districts:    Districts(),
+		Runners:      Runners(),
+		Factions:     Factions(),
+		JobTemplates: JobTemplates(),
 		Messages: []game.Message{{
 			Turn:    game.FirstTurn,
 			From:    "switchboard",
@@ -25,7 +26,7 @@ func InitialGameState(seed int64) game.GameState {
 			Text: "Dispatch console initialized.",
 		}},
 	}, seed)
-	state.AvailableJobs = game.GenerateJobs(state, JobTemplates(), game.DefaultJobsPerTurn)
+	state.AvailableJobs = game.GenerateJobs(state, state.JobTemplates, game.DefaultJobsPerTurn)
 	return state
 }
 
@@ -70,6 +71,16 @@ func Districts() []game.District {
 			FactionControl: FactionUnion,
 			Danger:         4,
 			SignalQuality:  3,
+		},
+		{
+			ID:             "ashgate_yard",
+			Name:           "Ashgate Yard",
+			Description:    "Rail spurs, furnace stacks, and union-controlled salvage lanes.",
+			Surveillance:   3,
+			Traffic:        5,
+			FactionControl: FactionUnion,
+			Danger:         3,
+			SignalQuality:  2,
 		},
 		{
 			ID:             "crown_verge",

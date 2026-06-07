@@ -19,13 +19,30 @@ const (
 	panelCount
 )
 
+type ScreenTab int
+
+const (
+	ScreenDashboard ScreenTab = iota
+	ScreenJobs
+	ScreenRouting
+	ScreenRunners
+	ScreenEquipment
+	ScreenHelp
+	screenTabCount
+)
+
 type Model struct {
-	state    game.GameState
-	width    int
-	height   int
-	focused  Panel
-	showHelp bool
-	styles   tui.Styles
+	state              game.GameState
+	width              int
+	height             int
+	focused            Panel
+	tab                ScreenTab
+	selectedJobIndex   int
+	selectedRunner     int
+	selectedRouteIndex int
+	notice             string
+	showHelp           bool
+	styles             tui.Styles
 }
 
 func New(seed int64) Model {
@@ -52,10 +69,36 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
+		case "up", "k":
+			m.moveSelection(-1)
+		case "down", "j":
+			m.moveSelection(1)
+		case "enter":
+			m.confirmSelection()
+		case "r":
+			m.cycleRoute()
+		case " ", "space":
+			m.advanceTurnPhase()
 		case "tab":
 			m.focused = (m.focused + 1) % panelCount
 		case "shift+tab":
 			m.focused = (m.focused + panelCount - 1) % panelCount
+		case "[":
+			m.tab = (m.tab + screenTabCount - 1) % screenTabCount
+		case "]":
+			m.tab = (m.tab + 1) % screenTabCount
+		case "1":
+			m.tab = ScreenDashboard
+		case "2":
+			m.tab = ScreenJobs
+		case "3":
+			m.tab = ScreenRouting
+		case "4":
+			m.tab = ScreenRunners
+		case "5":
+			m.tab = ScreenEquipment
+		case "6":
+			m.tab = ScreenHelp
 		case "?":
 			m.showHelp = !m.showHelp
 		}
@@ -66,11 +109,128 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) View() tea.View {
 	return tui.RenderDashboard(tui.DashboardView{
-		State:    m.state,
-		Width:    m.width,
-		Height:   m.height,
-		Focused:  int(m.focused),
-		ShowHelp: m.showHelp,
-		Styles:   m.styles,
+		State:              m.state,
+		Width:              m.width,
+		Height:             m.height,
+		Focused:            int(m.focused),
+		ActiveTab:          int(m.tab),
+		SelectedJobIndex:   m.selectedJobIndex,
+		SelectedRunner:     m.selectedRunner,
+		SelectedRouteIndex: m.selectedRouteIndex,
+		Notice:             m.notice,
+		ShowHelp:           m.showHelp,
+		Styles:             m.styles,
 	})
+}
+
+func (m *Model) moveSelection(delta int) {
+	m.notice = ""
+	switch m.focused {
+	case PanelJobs:
+		m.selectedJobIndex = wrapIndex(m.selectedJobIndex+delta, len(m.state.AvailableJobs))
+	case PanelRunners:
+		m.selectedRunner = wrapIndex(m.selectedRunner+delta, len(m.state.Runners))
+	case PanelDetail:
+		m.selectedRouteIndex = wrapIndex(m.selectedRouteIndex+delta, pendingRouteCount(m.state))
+	}
+}
+
+func (m *Model) confirmSelection() {
+	switch m.focused {
+	case PanelJobs:
+		m.acceptSelectedJob()
+	case PanelRunners:
+		m.assignPendingJob()
+	default:
+		m.notice = "Focus JOB BOARD to accept, RUNNERS to assign."
+	}
+}
+
+func (m *Model) acceptSelectedJob() {
+	if len(m.state.AvailableJobs) == 0 {
+		m.notice = "No posted jobs to accept."
+		return
+	}
+	job := m.state.AvailableJobs[wrapIndex(m.selectedJobIndex, len(m.state.AvailableJobs))]
+	if err := game.AcceptJob(&m.state, job.ID); err != nil {
+		m.notice = err.Error()
+		return
+	}
+	m.selectedJobIndex = wrapIndex(m.selectedJobIndex, len(m.state.AvailableJobs))
+	m.selectedRouteIndex = 0
+	m.focused = PanelRunners
+	m.notice = "Accepted " + job.Title + ". Select a runner."
+}
+
+func (m *Model) assignPendingJob() {
+	if len(m.state.AcceptedJobs) == 0 {
+		m.notice = "Accept a job first."
+		return
+	}
+	if len(m.state.Runners) == 0 {
+		m.notice = "No runners available."
+		return
+	}
+	job := m.state.AcceptedJobs[0]
+	runner := m.state.Runners[wrapIndex(m.selectedRunner, len(m.state.Runners))]
+	if len(job.Routes) == 0 {
+		m.notice = "Accepted job has no routes."
+		return
+	}
+	route := job.Routes[wrapIndex(m.selectedRouteIndex, len(job.Routes))]
+	bundling := runnerLoad(m.state, runner.ID) > 0
+	if err := game.AssignAcceptedJob(&m.state, job.ID, runner.ID, route.ID); err != nil {
+		m.notice = err.Error()
+		return
+	}
+	m.selectedRouteIndex = 0
+	if bundling {
+		m.notice = "Bundled " + job.Title + " with " + runner.Name + "."
+	} else {
+		m.notice = "Assigned " + job.Title + " to " + runner.Name + "."
+	}
+}
+
+func (m *Model) cycleRoute() {
+	m.selectedRouteIndex = wrapIndex(m.selectedRouteIndex+1, pendingRouteCount(m.state))
+	m.notice = ""
+}
+
+func (m *Model) advanceTurnPhase() {
+	advance := game.AdvanceTurnPhase(&m.state)
+	m.selectedRouteIndex = 0
+	results := advance.Results
+	if len(results) == 1 {
+		m.notice = "Resolved " + results[0].JobTitle + ": " + string(results[0].Outcome) + "."
+		return
+	}
+	m.notice = advance.Summary
+}
+
+func pendingRouteCount(state game.GameState) int {
+	if len(state.AcceptedJobs) == 0 {
+		return 0
+	}
+	return len(state.AcceptedJobs[0].Routes)
+}
+
+func wrapIndex(index int, length int) int {
+	if length <= 0 {
+		return 0
+	}
+	index %= length
+	if index < 0 {
+		index += length
+	}
+	return index
+}
+
+func runnerLoad(state game.GameState, runnerID game.RunnerID) int {
+	load := 0
+	for _, active := range state.ActiveJobs {
+		if active.RunnerID == runnerID {
+			load++
+		}
+	}
+	return load
 }

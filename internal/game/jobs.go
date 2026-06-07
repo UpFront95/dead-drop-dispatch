@@ -7,6 +7,15 @@ import (
 
 const DefaultJobsPerTurn = 3
 
+func RefreshAvailableJobs(state *GameState, count int) []Job {
+	state.AvailableJobs = GenerateJobs(*state, state.JobTemplates, count)
+	state.EventLog = append(state.EventLog, LogEntry{
+		Turn: state.Turn,
+		Text: fmt.Sprintf("Job board refreshed with %d postings.", len(state.AvailableJobs)),
+	})
+	return state.AvailableJobs
+}
+
 func GenerateJobs(state GameState, templates []JobTemplate, count int) []Job {
 	if count <= 0 || len(templates) == 0 || len(state.Districts) < 2 {
 		return nil
@@ -48,6 +57,7 @@ func buildJob(state GameState, template JobTemplate, origin District, destinatio
 	if deadline <= 1 {
 		payout += 90
 	}
+	riskFactors := jobRiskFactors(template, origin, destination)
 
 	return Job{
 		ID:            jobID,
@@ -61,7 +71,8 @@ func buildJob(state GameState, template JobTemplate, origin District, destinatio
 		Payout:        payout,
 		Faction:       template.Faction,
 		Modifiers:     append([]string(nil), template.Modifiers...),
-		RiskFactors:   jobRiskFactors(template, origin, destination),
+		RiskFactors:   riskFactors,
+		Intel:         []IntelReport{JobIntelReport(state, riskFactors)},
 		Routes:        generateRoutes(jobID, template, origin, destination),
 	}
 }

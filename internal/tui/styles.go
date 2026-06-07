@@ -15,6 +15,8 @@ type Styles struct {
 	PanelFocus lipgloss.Style
 	PanelText  lipgloss.Style
 	PanelTitle lipgloss.Style
+	TabActive  lipgloss.Style
+	Tab        lipgloss.Style
 	Muted      lipgloss.Style
 	Accent     lipgloss.Style
 	Warning    lipgloss.Style
@@ -38,6 +40,8 @@ func NewStylesForBackground(dark bool) Styles {
 func darkStyles() Styles {
 	baseBackground := lipgloss.Color("#2B2B31")
 	panelBackground := lipgloss.Color("#32323A")
+	inactiveTabBorder := tabBorderWithBottom("┴", "─", "┴")
+	activeTabBorder := tabBorderWithBottom("┘", " ", "└")
 
 	return Styles{
 		Base:       lipgloss.NewStyle().Foreground(lipgloss.Color("#D8D8E6")).Background(baseBackground),
@@ -47,6 +51,8 @@ func darkStyles() Styles {
 		PanelFocus: lipgloss.NewStyle().Foreground(lipgloss.Color("#E8E8F2")).Background(panelBackground).Border(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("#00D9FF")).Padding(0, 1),
 		PanelText:  lipgloss.NewStyle().Foreground(lipgloss.Color("#D8D8E6")).Background(panelBackground),
 		PanelTitle: lipgloss.NewStyle().Foreground(lipgloss.Color("#67DFFF")).Background(panelBackground).Bold(true),
+		TabActive:  lipgloss.NewStyle().Foreground(lipgloss.Color("#E8E8F2")).Background(baseBackground).Border(activeTabBorder, true).BorderForeground(lipgloss.Color("#00D9FF")).Bold(true).Padding(0, 1),
+		Tab:        lipgloss.NewStyle().Foreground(lipgloss.Color("#B8B8C8")).Background(baseBackground).Border(inactiveTabBorder, true).BorderForeground(lipgloss.Color("#4A4A57")).Padding(0, 1),
 		Muted:      lipgloss.NewStyle().Foreground(lipgloss.Color("#B8B8C8")).Background(panelBackground),
 		Accent:     lipgloss.NewStyle().Foreground(lipgloss.Color("#7EE787")).Background(panelBackground),
 		Warning:    lipgloss.NewStyle().Foreground(lipgloss.Color("#E6C97A")).Background(panelBackground),
@@ -60,6 +66,8 @@ func darkStyles() Styles {
 func lightStyles() Styles {
 	baseBackground := lipgloss.Color("#E8E8F2")
 	panelBackground := lipgloss.Color("#D8D8E6")
+	inactiveTabBorder := tabBorderWithBottom("┴", "─", "┴")
+	activeTabBorder := tabBorderWithBottom("┘", " ", "└")
 
 	return Styles{
 		Base:       lipgloss.NewStyle().Foreground(lipgloss.Color("#2B2B31")).Background(baseBackground),
@@ -69,6 +77,8 @@ func lightStyles() Styles {
 		PanelFocus: lipgloss.NewStyle().Foreground(lipgloss.Color("#2B2B31")).Background(panelBackground).Border(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("#0084A3")).Padding(0, 1),
 		PanelText:  lipgloss.NewStyle().Foreground(lipgloss.Color("#2B2B31")).Background(panelBackground),
 		PanelTitle: lipgloss.NewStyle().Foreground(lipgloss.Color("#007FA0")).Background(panelBackground).Bold(true),
+		TabActive:  lipgloss.NewStyle().Foreground(lipgloss.Color("#2B2B31")).Background(baseBackground).Border(activeTabBorder, true).BorderForeground(lipgloss.Color("#0084A3")).Bold(true).Padding(0, 1),
+		Tab:        lipgloss.NewStyle().Foreground(lipgloss.Color("#5B5B6A")).Background(baseBackground).Border(inactiveTabBorder, true).BorderForeground(lipgloss.Color("#8C8C9E")).Padding(0, 1),
 		Muted:      lipgloss.NewStyle().Foreground(lipgloss.Color("#5B5B6A")).Background(panelBackground),
 		Accent:     lipgloss.NewStyle().Foreground(lipgloss.Color("#007F4E")).Background(panelBackground),
 		Warning:    lipgloss.NewStyle().Foreground(lipgloss.Color("#8A6500")).Background(panelBackground),
@@ -77,4 +87,12 @@ func lightStyles() Styles {
 		InlineCode: lipgloss.NewStyle().Foreground(lipgloss.Color("#B60091")).Background(panelBackground),
 		Divider:    lipgloss.NewStyle().Foreground(lipgloss.Color("#8C8C9E")).Background(panelBackground),
 	}
+}
+
+func tabBorderWithBottom(left string, middle string, right string) lipgloss.Border {
+	border := lipgloss.RoundedBorder()
+	border.BottomLeft = left
+	border.Bottom = middle
+	border.BottomRight = right
+	return border
 }

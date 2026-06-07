@@ -53,7 +53,7 @@ The MVP includes:
 
 ### 4.1 One City Sector
 
-The MVP contains one playable city sector with five districts.
+The MVP contains one playable city sector with six districts.
 
 Example districts:
 
@@ -63,6 +63,7 @@ Example districts:
 | Floodglass | Low streets, tunnels, pump stations, illegal clinics | Medium risk, slow routes, useful for hiding |
 | Saint Orison Market | Dense bazaar, shrines, noodle stalls, black-market kiosks | Low surveillance, high faction activity |
 | Port Kestrel | Cargo yards, drone cranes, container stacks | Good for contraband, gang risk |
+| Ashgate Yard | Rail spurs, furnace stacks, and union-controlled salvage lanes | High traffic, weak signal, useful industrial routing |
 | Crown Verge | Luxury towers and private security zones | High payout, high corporate security |
 
 Each district has the following MVP stats:

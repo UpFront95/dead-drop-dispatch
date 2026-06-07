@@ -90,3 +90,38 @@ func TestGeneratedJobsAreValid(t *testing.T) {
 		}
 	}
 }
+
+func TestRefreshAvailableJobsUsesStateTemplatesAndCurrentClock(t *testing.T) {
+	state := content.InitialGameState(42)
+	state.Turn = 3
+	state.AvailableJobs = []game.Job{{ID: "stale"}}
+	state.AcceptedJobs = []game.Job{{ID: "accepted"}}
+	state.ActiveJobs = []game.ActiveJob{{JobID: "active"}}
+	startLog := len(state.EventLog)
+
+	jobs := game.RefreshAvailableJobs(&state, game.DefaultJobsPerTurn)
+
+	if got, want := len(jobs), game.DefaultJobsPerTurn; got != want {
+		t.Fatalf("jobs = %d, want %d", got, want)
+	}
+	if got, want := len(state.AvailableJobs), game.DefaultJobsPerTurn; got != want {
+		t.Fatalf("available jobs = %d, want %d", got, want)
+	}
+	if state.AvailableJobs[0].ID == "stale" {
+		t.Fatal("refresh should replace stale available jobs")
+	}
+	for _, job := range state.AvailableJobs {
+		if job.ID[:6] != "n01t03" {
+			t.Fatalf("job id = %q, want current clock prefix n01t03", job.ID)
+		}
+	}
+	if got, want := len(state.AcceptedJobs), 1; got != want {
+		t.Fatalf("accepted jobs = %d, want %d", got, want)
+	}
+	if got, want := len(state.ActiveJobs), 1; got != want {
+		t.Fatalf("active jobs = %d, want %d", got, want)
+	}
+	if got, want := len(state.EventLog), startLog+1; got != want {
+		t.Fatalf("event log = %d, want %d", got, want)
+	}
+}
