@@ -180,7 +180,7 @@ Promote the dashboard from a display surface into the primary command center for
 
 | Status | ID | Priority | Task |
 |---|---|---|---|
-| [ ] | TUI-03 | P2 | Implement dashboard as the primary command center for accepting jobs, assigning runners, selecting routes, and advancing turns. |
+| [x] | TUI-03 | P2 | **DONE (2026-06-07).** Dashboard now accepts jobs, assigns runners, cycles selected routes, supports bundling through assignment, advances/resolves turns with `space`, renders pending assignment route detail, and has app-level workflow tests for accept/assign/resolve. |
 | [ ] | TUI-04 | P2 | Add jobs, routing, runners, factions, messages, log, and help screens. |
 | [ ] | TUI-05 | P2 | Add screen-specific key maps. |
 | [ ] | TUI-06 | P1 | Add empty states for no jobs, no messages, and no active assignments. |
