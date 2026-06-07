@@ -2,6 +2,7 @@ package game
 
 import (
 	"math/rand"
+	"strings"
 	"testing"
 )
 
@@ -204,6 +205,69 @@ func TestResultCargoIntegrity(t *testing.T) {
 			got := resultCargoIntegrity(tt.outcome, tt.cargoDamage)
 			if got != tt.want {
 				t.Fatalf("cargo integrity = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestResultSummaryExplainsDeliveryOutcome(t *testing.T) {
+	tests := []struct {
+		name   string
+		result JobResult
+		want   []string
+	}{
+		{
+			name: "success",
+			result: JobResult{
+				JobTitle:   "Clean Drop",
+				RunnerName: "Runner One",
+				Outcome:    OutcomeSuccess,
+			},
+			want: []string{"completed Clean Drop cleanly", "cargo intact"},
+		},
+		{
+			name: "partial",
+			result: JobResult{
+				JobTitle:    "Late Cooler",
+				RunnerName:  "Runner One",
+				Outcome:     OutcomePartial,
+				Payout:      50,
+				Delay:       true,
+				CargoDamage: true,
+				Factors:     []string{"weak signal", "medical spoilage", "traffic pressure"},
+			},
+			want: []string{"delivery came in rough", "route delay forced a late handoff", "cargo was damaged in transit", "client cut the payout", "Factors: weak signal, medical spoilage, traffic pressure."},
+		},
+		{
+			name: "failed injury",
+			result: JobResult{
+				JobTitle:   "Bad Witness",
+				RunnerName: "Runner One",
+				Outcome:    OutcomeFailed,
+				Injury:     true,
+			},
+			want: []string{"could not complete Bad Witness", "runner was hurt during the run", "No payout cleared"},
+		},
+		{
+			name: "intercepted",
+			result: JobResult{
+				JobTitle:     "Data Trace",
+				RunnerName:   "Runner One",
+				Outcome:      OutcomeIntercepted,
+				Detection:    true,
+				Interception: true,
+			},
+			want: []string{"lost Data Trace to an intercept", "route drew heat", "Cargo is gone and heat climbs"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := resultSummary(tt.result)
+			for _, want := range tt.want {
+				if !strings.Contains(got, want) {
+					t.Fatalf("summary = %q, want substring %q", got, want)
+				}
 			}
 		})
 	}

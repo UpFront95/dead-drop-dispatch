@@ -81,7 +81,7 @@ func resolveActiveJob(state *GameState, active ActiveJob, bundleLoad int, rng *r
 	dispatchIntegrityLoss := resultDispatchIntegrityLoss(outcome, cargoDamage)
 
 	factors := resultFactors(job, route, detection, delay, complication, complicationType, injury, cargoDamage, interception, bundleLoad)
-	return JobResult{
+	result := JobResult{
 		JobID:                 job.ID,
 		JobTitle:              job.Title,
 		RunnerID:              active.RunnerID,
@@ -102,8 +102,9 @@ func resolveActiveJob(state *GameState, active ActiveJob, bundleLoad int, rng *r
 		CargoDamage:           cargoDamage,
 		Interception:          interception,
 		Factors:               factors,
-		Summary:               resultSummary(job.Title, runner.Name, outcome, factors),
 	}
+	result.Summary = resultSummary(result)
+	return result
 }
 
 func applyJobResult(state *GameState, result JobResult) {
@@ -193,7 +194,7 @@ func appendResolutionMessage(state *GameState, results []JobResult) {
 	}
 	lines := make([]string, 0, len(results))
 	for _, result := range results {
-		lines = append(lines, fmt.Sprintf("%s: %s", result.JobTitle, result.Outcome))
+		lines = append(lines, result.Summary)
 	}
 	state.LastResults = results
 	state.Messages = append(state.Messages, Message{
@@ -404,13 +405,65 @@ func resultDispatchIntegrityLoss(outcome JobOutcome, cargoDamage bool) int {
 	return loss
 }
 
-func resultSummary(jobTitle string, runnerName string, outcome JobOutcome, factors []string) string {
-	summary := fmt.Sprintf("%s returned from %s: %s.", runnerName, jobTitle, outcome)
-	if len(factors) > 0 {
-		limit := min(len(factors), 3)
-		summary += " Factors: " + strings.Join(factors[:limit], ", ") + "."
+func resultSummary(result JobResult) string {
+	var summary string
+	causes := resultCauseClauses(result)
+	causeText := strings.Join(causes, "; ")
+
+	switch result.Outcome {
+	case OutcomeSuccess:
+		summary = fmt.Sprintf("%s completed %s cleanly. The delivery landed with cargo intact.", result.RunnerName, result.JobTitle)
+	case OutcomePartial:
+		if causeText == "" {
+			causeText = "the client accepted the drop under protest"
+		}
+		summary = fmt.Sprintf("%s completed %s, but the delivery came in rough: %s.", result.RunnerName, result.JobTitle, causeText)
+	case OutcomeFailed:
+		if causeText == "" {
+			causeText = "the handoff collapsed before contact"
+		}
+		summary = fmt.Sprintf("%s could not complete %s: %s. No payout cleared.", result.RunnerName, result.JobTitle, causeText)
+	case OutcomeIntercepted:
+		if causeText == "" {
+			causeText = "security caught the line before the drop"
+		}
+		summary = fmt.Sprintf("%s lost %s to an intercept: %s. Cargo is gone and heat climbs.", result.RunnerName, result.JobTitle, causeText)
+	default:
+		summary = fmt.Sprintf("%s returned from %s: %s.", result.RunnerName, result.JobTitle, result.Outcome)
+	}
+
+	if len(result.Factors) > 0 {
+		limit := min(len(result.Factors), 3)
+		summary += " Factors: " + strings.Join(result.Factors[:limit], ", ") + "."
 	}
 	return summary
+}
+
+func resultCauseClauses(result JobResult) []string {
+	causes := []string{}
+	if result.Delay {
+		causes = append(causes, "route delay forced a late handoff")
+	}
+	if result.CargoDamage {
+		causes = append(causes, "cargo was damaged in transit")
+	}
+	if result.Injury {
+		causes = append(causes, "the runner was hurt during the run")
+	}
+	if result.Detection {
+		causes = append(causes, "the route drew heat")
+	}
+	if result.Complication {
+		if result.ComplicationType != ComplicationNone {
+			causes = append(causes, fmt.Sprintf("%s complication interrupted the line", strings.ReplaceAll(string(result.ComplicationType), "_", " ")))
+		} else {
+			causes = append(causes, "a complication interrupted the line")
+		}
+	}
+	if result.Outcome == OutcomePartial && result.Payout > 0 {
+		causes = append(causes, "the client cut the payout")
+	}
+	return causes
 }
 
 func bundleLoadMap(bundles []Bundle) map[RunnerID]int {

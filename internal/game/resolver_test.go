@@ -2,6 +2,7 @@ package game_test
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"dead-drop-dispatch/internal/content"
@@ -31,6 +32,9 @@ func TestResolveActiveJobsClearsWorkAndRecordsResults(t *testing.T) {
 	}
 	if len(state.Messages) == 0 || state.Messages[len(state.Messages)-1].From != "after-action" {
 		t.Fatalf("resolution should append after-action message, got %#v", state.Messages)
+	}
+	if !strings.Contains(state.Messages[len(state.Messages)-1].Body, results[0].Summary) {
+		t.Fatalf("after-action body = %q, want summary %q", state.Messages[len(state.Messages)-1].Body, results[0].Summary)
 	}
 	if len(state.EventLog) == 0 || state.EventLog[len(state.EventLog)-1].Text == "" {
 		t.Fatal("resolution should append event log entry")

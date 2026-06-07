@@ -216,7 +216,7 @@ Add save/load, autosave, seeded runs, and enough deterministic fiction to make t
 | [ ] | FIC-03 | P2 | Keep fallback text short enough for TUI panels. |
 | [ ] | FIC-04 | P2 | Add tests for fallback availability. |
 | [ ] | FIC-05 | P1 | Ensure MVP content includes at least thirty fallback messages and twenty fallback after-action reports. |
-| [ ] | FIC-06 | P2 | Add deterministic delivery outcome text for success, partial, failed, and intercepted jobs, with extra variants for cargo damage, delay, injury, nonpayment, and client/faction fallout; reports should say what happened, not only list mechanical deltas. |
+| [x] | FIC-06 | P2 | **DONE (2026-06-07).** Added deterministic delivery outcome text for success, partial, failed, and intercepted jobs, with cause clauses for delay, cargo damage, injury, detection, complications, payout cuts, and intercept fallout; after-action messages now use the richer result summaries. |
 
 ## Phase 7 — Optional LLM Layer
 
