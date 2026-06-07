@@ -330,11 +330,7 @@ func renderCity(state game.GameState, styles Styles) string {
 
 func renderJobs(state game.GameState, selected int, styles Styles) string {
 	if len(state.AvailableJobs) == 0 {
-		lines := []string{
-			styles.Muted.Render("No contracts posted."),
-			styles.PanelText.Render(" "),
-			styles.PanelText.Render("Dispatch wire is quiet."),
-		}
+		lines := renderNoJobsState(state, styles)
 		if len(state.AcceptedJobs) > 0 {
 			lines = append(lines, styles.PanelText.Render(" "), styles.Accent.Render("Accepted"))
 			for _, job := range state.AcceptedJobs {
@@ -381,6 +377,30 @@ func renderJobs(state game.GameState, selected int, styles Styles) string {
 		}
 	}
 	return strings.TrimRight(b.String(), "\n")
+}
+
+func renderNoJobsState(state game.GameState, styles Styles) []string {
+	lines := []string{
+		styles.Muted.Render("No contracts posted."),
+		styles.PanelText.Render(" "),
+	}
+	switch state.Phase {
+	case game.PhaseMessages:
+		lines = append(lines, styles.PanelText.Render("Review messages to refresh the board."))
+	case game.PhaseJobs:
+		lines = append(lines, styles.PanelText.Render("Fresh postings are pending on the wire."))
+	case game.PhaseDispatch:
+		if len(state.AcceptedJobs) > 0 || len(state.ActiveJobs) > 0 {
+			lines = append(lines, styles.PanelText.Render("Work is already on the desk."))
+		} else {
+			lines = append(lines, styles.PanelText.Render("Advance the phase for new postings."))
+		}
+	case game.PhaseGameOver:
+		lines = append(lines, styles.PanelText.Render("Run is closed. No new work."))
+	default:
+		lines = append(lines, styles.PanelText.Render("Dispatch wire is quiet."))
+	}
+	return lines
 }
 
 func renderDetail(state game.GameState, focused int, selectedJob int, selectedRunner int, selectedRoute int, notice string, styles Styles) string {
@@ -476,7 +496,7 @@ func renderRunnerDetail(state game.GameState, runner game.Runner, notice string,
 
 	bundle := runnerBundle(state, runner.ID)
 	if len(bundle.Jobs) == 0 {
-		lines = append(lines, styles.Muted.Render("No active bundle."))
+		lines = append(lines, renderNoActiveAssignmentState(state, runner, styles)...)
 		return strings.Join(lines, "\n")
 	}
 
@@ -523,7 +543,7 @@ func renderRunners(state game.GameState, selected int, styles Styles) string {
 
 func renderMessages(state game.GameState, styles Styles) string {
 	if len(state.Messages) == 0 {
-		return styles.Muted.Render("No messages.")
+		return strings.Join(renderNoMessagesState(state, styles), "\n")
 	}
 
 	var b strings.Builder
@@ -537,6 +557,45 @@ func renderMessages(state game.GameState, styles Styles) string {
 		fmt.Fprintln(&b, styles.PanelText.Render(fmt.Sprintf("     %s", message.Body)))
 	}
 	return strings.TrimRight(b.String(), "\n")
+}
+
+func renderNoActiveAssignmentState(state game.GameState, runner game.Runner, styles Styles) []string {
+	if len(state.AcceptedJobs) > 0 && runner.State == game.RunnerReady {
+		return []string{
+			styles.Muted.Render("No active assignment."),
+			styles.PanelText.Render("Ready for the pending job."),
+		}
+	}
+	if runner.State != game.RunnerReady {
+		return []string{
+			styles.Muted.Render("No active assignment."),
+			styles.PanelText.Render("Runner is not ready for dispatch."),
+		}
+	}
+	return []string{
+		styles.Muted.Render("No active assignment."),
+		styles.PanelText.Render("Accept a job, then assign here."),
+	}
+}
+
+func renderNoMessagesState(state game.GameState, styles Styles) []string {
+	lines := []string{
+		styles.Muted.Render("No messages."),
+		styles.PanelText.Render(" "),
+	}
+	switch state.Phase {
+	case game.PhaseReports:
+		lines = append(lines, styles.PanelText.Render("Reports will file on the next advance."))
+	case game.PhaseCityUpdate:
+		lines = append(lines, styles.PanelText.Render("City update will queue the next brief."))
+	case game.PhaseMessages:
+		lines = append(lines, styles.PanelText.Render("Switchboard is quiet for this turn."))
+	case game.PhaseGameOver:
+		lines = append(lines, styles.PanelText.Render("Run is closed."))
+	default:
+		lines = append(lines, styles.PanelText.Render("No calls need a response."))
+	}
+	return lines
 }
 
 func panel(title string, body string, width int, height int, focused bool, styles Styles) string {

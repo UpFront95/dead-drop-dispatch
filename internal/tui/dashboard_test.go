@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"dead-drop-dispatch/internal/content"
+	"dead-drop-dispatch/internal/game"
 )
 
 func TestRenderDashboardTargetSizeContent(t *testing.T) {
@@ -105,6 +106,43 @@ func TestRenderDashboardRunnersUseFixedStatusAndStatRows(t *testing.T) {
 	}
 	if strings.Contains(content, "\n  ready") {
 		t.Fatalf("runner status should stay on the name row")
+	}
+}
+
+func TestRenderDashboardEmptyStatesAreActionable(t *testing.T) {
+	state := content.InitialGameState(42)
+	state.AvailableJobs = nil
+	state.Messages = nil
+	state.Phase = game.PhaseMessages
+
+	view := RenderDashboard(DashboardView{
+		State:   state,
+		Width:   TargetWidth,
+		Height:  TargetHeight,
+		Focused: focusRunners,
+		Styles:  NewStyles(),
+	})
+
+	content := ansi.Strip(view.Content)
+	for _, want := range []string{
+		"No contracts posted.",
+		"Review messages to refresh the board.",
+		"No messages.",
+		"Switchboard is quiet for this turn.",
+		"No active assignment.",
+		"Accept a job, then assign here.",
+	} {
+		if !strings.Contains(content, want) {
+			t.Fatalf("rendered empty state missing %q", want)
+		}
+	}
+
+	if got := lineCount(content); got != TargetHeight {
+		t.Fatalf("rendered empty dashboard height = %d, want %d", got, TargetHeight)
+	}
+
+	if got := maxLineWidth(content); got > TargetWidth {
+		t.Fatalf("rendered empty dashboard width = %d, want <= %d", got, TargetWidth)
 	}
 }
 

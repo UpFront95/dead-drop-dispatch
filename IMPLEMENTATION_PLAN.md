@@ -183,7 +183,7 @@ Promote the dashboard from a display surface into the primary command center for
 | [x] | TUI-03 | P2 | **DONE (2026-06-07).** Dashboard now accepts jobs, assigns runners, cycles selected routes, supports bundling through assignment, advances/resolves turns with `space`, renders pending assignment route detail, and has app-level workflow tests for accept/assign/resolve. |
 | [ ] | TUI-04 | P2 | Add jobs, routing, runners, factions, messages, log, and help screens. |
 | [ ] | TUI-05 | P2 | Add screen-specific key maps. |
-| [ ] | TUI-06 | P1 | Add empty states for no jobs, no messages, and no active assignments. |
+| [x] | TUI-06 | P1 | **DONE (2026-06-07).** Added phase-aware empty states for no posted jobs and no messages plus clearer runner detail copy for no active assignments, with render smoke coverage. |
 | [ ] | TUI-07 | P2 | Add confirmation prompts for risky actions. |
 | [x] | TUI-08 | P2 | **DONE (2026-06-07).** Added a right-aligned header `NEXT` chip and a compact center spacer strip showing current action, selected job risk factors, selected route summary, and notices without adding a new panel. |
 | [ ] | TUI-09 | P2 | Add visual indication of bundled jobs in every relevant view. |
