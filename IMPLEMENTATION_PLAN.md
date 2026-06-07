@@ -35,6 +35,7 @@ Status markers: `[ ]` = open, `[~]` = in progress, `[x]` = done.
 - The run clock uses six turns per night and rolls over to the next night during city update; crossing past night seven leaves final win/loss interpretation to the existing run-status checks and later RUN-06/RUN-07 work.
 - Job templates are copied into `GameState` at run creation so the game-layer turn coordinator can refresh available jobs without importing static content.
 - Runner recovery happens during city update: ready runners shed stress, injured runners tick recovery, and recovered injured runners return to ready.
+- After-action reporting should explain what physically happened during deliveries, especially partial and failed outcomes; injuries need concrete severity/cause text instead of only a binary injured state.
 
 ## ID Prefix Registry
 
@@ -136,6 +137,7 @@ Turn jobs into active work, support compatible bundles, and resolve route outcom
 | [x] | RES-06 | P2 | Produce player-facing explanations using contributing factors rather than exact math. |
 | [x] | RES-07 | P2 | **DONE (2026-06-07).** Made resolver outcome application explicit for credits, heat, runner stress/state/loyalty, faction reputation/suspicion, cargo integrity, and dispatch integrity. |
 | [x] | RES-08 | P2 | Add deterministic logs and fixed-seed resolver tests. |
+| [ ] | RES-09 | P1 | Add structured injury detail to resolver results and logs, including severity, cause, recovery estimate, and short player-facing text tied to route, district, cargo, and complication factors. |
 
 ## Phase 4 — Complications, Economy, And Turn Loop
 
@@ -214,6 +216,7 @@ Add save/load, autosave, seeded runs, and enough deterministic fiction to make t
 | [ ] | FIC-03 | P2 | Keep fallback text short enough for TUI panels. |
 | [ ] | FIC-04 | P2 | Add tests for fallback availability. |
 | [ ] | FIC-05 | P1 | Ensure MVP content includes at least thirty fallback messages and twenty fallback after-action reports. |
+| [ ] | FIC-06 | P2 | Add deterministic delivery outcome text for success, partial, failed, and intercepted jobs, with extra variants for cargo damage, delay, injury, nonpayment, and client/faction fallout; reports should say what happened, not only list mechanical deltas. |
 
 ## Phase 7 — Optional LLM Layer
 
