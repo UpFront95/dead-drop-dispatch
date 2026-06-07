@@ -146,6 +146,66 @@ func TestRenderDashboardEmptyStatesAreActionable(t *testing.T) {
 	}
 }
 
+func TestRenderDashboardShowsBundleMarkers(t *testing.T) {
+	state := bundledDashboardState()
+
+	view := RenderDashboard(DashboardView{
+		State:          state,
+		Width:          TargetWidth,
+		Height:         TargetHeight,
+		Focused:        focusRunners,
+		SelectedRunner: 0,
+		Styles:         NewStyles(),
+	})
+
+	content := ansi.Strip(view.Content)
+	for _, want := range []string{
+		"B1 Data handoff",
+		"B2 Med cooler",
+		"Bundle 2/2",
+		"destination complexity",
+	} {
+		if !strings.Contains(content, want) {
+			t.Fatalf("rendered bundled dashboard missing %q", want)
+		}
+	}
+
+	if got := lineCount(content); got != TargetHeight {
+		t.Fatalf("rendered bundled dashboard height = %d, want %d", got, TargetHeight)
+	}
+
+	if got := maxLineWidth(content); got > TargetWidth {
+		t.Fatalf("rendered bundled dashboard width = %d, want <= %d", got, TargetWidth)
+	}
+}
+
+func TestRenderDashboardShowsPendingBundleCue(t *testing.T) {
+	state := bundledDashboardState()
+	state.ActiveJobs = state.ActiveJobs[:1]
+	state.Bundles[0].Jobs = state.Bundles[0].Jobs[:1]
+	state.Bundles[0].Penalties = nil
+	state.AcceptedJobs = []game.Job{testDashboardJob("job-3", "Rush followup", "floodglass", "port_kestrel")}
+
+	view := RenderDashboard(DashboardView{
+		State:          state,
+		Width:          TargetWidth,
+		Height:         TargetHeight,
+		Focused:        focusDetail,
+		SelectedRunner: 0,
+		Styles:         NewStyles(),
+	})
+
+	content := ansi.Strip(view.Content)
+	for _, want := range []string{
+		"Pending assignment",
+		"Will bundle with Mira Vale (1/2).",
+	} {
+		if !strings.Contains(content, want) {
+			t.Fatalf("rendered pending bundle cue missing %q", want)
+		}
+	}
+}
+
 func runnerLines(content string) string {
 	content = ansi.Strip(content)
 	lines := []string{}
@@ -159,6 +219,59 @@ func runnerLines(content string) string {
 		}
 	}
 	return strings.Join(lines, "\n")
+}
+
+func bundledDashboardState() game.GameState {
+	state := content.InitialGameState(42)
+	state.AvailableJobs = nil
+	state.AcceptedJobs = nil
+	state.ActiveJobs = nil
+	state.Bundles = nil
+	state.Runners[0].State = game.RunnerOnJob
+
+	first := testDashboardJob("job-1", "Data handoff", "northline", "floodglass")
+	second := testDashboardJob("job-2", "Med cooler", "floodglass", "port_kestrel")
+	firstActive := game.ActiveJob{
+		JobID:    first.ID,
+		RunnerID: state.Runners[0].ID,
+		RouteID:  first.Routes[0].ID,
+		Job:      first,
+		Route:    first.Routes[0],
+	}
+	secondActive := game.ActiveJob{
+		JobID:    second.ID,
+		RunnerID: state.Runners[0].ID,
+		RouteID:  second.Routes[0].ID,
+		Job:      second,
+		Route:    second.Routes[0],
+	}
+	state.ActiveJobs = []game.ActiveJob{firstActive, secondActive}
+	state.Bundles = []game.Bundle{{
+		RunnerID:  state.Runners[0].ID,
+		Jobs:      []game.ActiveJob{firstActive, secondActive},
+		Penalties: []string{"destination complexity"},
+	}}
+	return state
+}
+
+func testDashboardJob(id string, title string, origin game.DistrictID, destination game.DistrictID) game.Job {
+	return game.Job{
+		ID:            id,
+		Title:         title,
+		Cargo:         game.CargoDataShard,
+		Origin:        origin,
+		Destination:   destination,
+		DeadlineTurns: 2,
+		Payout:        100,
+		Routes: []game.Route{{
+			ID:        id + "-r1",
+			Type:      game.RouteServiceTunnels,
+			Name:      "Service tunnels",
+			Districts: []game.DistrictID{origin, destination},
+			TimeCost:  1,
+			Traits:    []string{"low cameras", "tight access"},
+		}},
+	}
 }
 
 func TestRenderDashboardPlaceholderTabLeavesBodyBlank(t *testing.T) {

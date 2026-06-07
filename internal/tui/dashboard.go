@@ -405,7 +405,7 @@ func renderNoJobsState(state game.GameState, styles Styles) []string {
 
 func renderDetail(state game.GameState, focused int, selectedJob int, selectedRunner int, selectedRoute int, notice string, styles Styles) string {
 	if len(state.AcceptedJobs) > 0 {
-		return renderAcceptedJobDetail(state, state.AcceptedJobs[0], selectedRoute, notice, styles)
+		return renderAcceptedJobDetail(state, state.AcceptedJobs[0], selectedRunner, selectedRoute, notice, styles)
 	}
 	if len(state.AvailableJobs) > 0 && (focused == focusJobs || focused == focusDetail) {
 		return renderJobDetail(state, state.AvailableJobs[clampIndex(selectedJob, len(state.AvailableJobs))], styles)
@@ -438,7 +438,7 @@ func renderDetail(state game.GameState, focused int, selectedJob int, selectedRu
 	return strings.Join(lines, "\n")
 }
 
-func renderAcceptedJobDetail(state game.GameState, job game.Job, selectedRoute int, notice string, styles Styles) string {
+func renderAcceptedJobDetail(state game.GameState, job game.Job, selectedRunner int, selectedRoute int, notice string, styles Styles) string {
 	lines := []string{}
 	if notice != "" {
 		lines = append(lines, styles.Warning.Render(notice), styles.PanelText.Render(" "))
@@ -457,6 +457,17 @@ func renderAcceptedJobDetail(state game.GameState, job game.Job, selectedRoute i
 			marker = ">"
 		}
 		lines = append(lines, styles.PanelText.Render(marker+" "+formatRouteDetail(route)))
+	}
+	if runner, ok := selectedPendingRunner(state, selectedRunner); ok {
+		load := runnerLoad(state, runner.ID)
+		if load > 0 {
+			lines = append(lines, styles.PanelText.Render(" "))
+			if load >= game.MaxJobsPerRunner {
+				lines = append(lines, styles.Critical.Render(fmt.Sprintf("%s bundle full (%d/%d).", runner.Name, load, game.MaxJobsPerRunner)))
+			} else {
+				lines = append(lines, styles.Warning.Render(fmt.Sprintf("Will bundle with %s (%d/%d).", runner.Name, load, game.MaxJobsPerRunner)))
+			}
+		}
 	}
 	lines = append(lines, styles.PanelText.Render(" "), styles.Muted.Render("Select a runner, press enter."))
 	return strings.Join(lines, "\n")
@@ -500,10 +511,9 @@ func renderRunnerDetail(state game.GameState, runner game.Runner, notice string,
 		return strings.Join(lines, "\n")
 	}
 
-	lines = append(lines, styles.Accent.Render("Active bundle"))
-	for _, active := range bundle.Jobs {
-		lines = append(lines, styles.PanelText.Render("  "+active.Job.Title))
-		lines = append(lines, styles.Muted.Render("  "+formatRouteDetail(active.Route)))
+	lines = append(lines, styles.Accent.Render(fmt.Sprintf("Bundle %d/%d", len(bundle.Jobs), game.MaxJobsPerRunner)))
+	for i, active := range bundle.Jobs {
+		lines = append(lines, styles.PanelText.Render(fmt.Sprintf("  B%d %s", i+1, clipText(active.Job.Title, 19)))+styles.Muted.Render(" / "+formatRouteDetail(active.Route)))
 	}
 	if len(bundle.Penalties) > 0 {
 		lines = append(lines, styles.PanelText.Render(" "), styles.Accent.Render("Bundle pressure"))
@@ -534,8 +544,8 @@ func renderRunners(state game.GameState, selected int, styles Styles) string {
 		fmt.Fprintln(&b, styles.PanelText.Render(fmt.Sprintf("  SPD %-2d STL %-2d NRV %-2d TLK %-2d", runner.Speed, runner.Stealth, runner.Nerve, runner.Talk)))
 		fmt.Fprintln(&b, styles.PanelText.Render(fmt.Sprintf("  LOY %-2d STR %-2d CAP %d/%d", runner.Loyalty, runner.Stress, runnerLoad(state, runner.ID), game.MaxJobsPerRunner)))
 		bundle := runnerBundle(state, runner.ID)
-		for _, active := range bundle.Jobs {
-			fmt.Fprintln(&b, styles.Muted.Render("  - "+clipText(active.Job.Title, 34)))
+		for bundleIndex, active := range bundle.Jobs {
+			fmt.Fprintln(&b, styles.Muted.Render(fmt.Sprintf("  B%d %s", bundleIndex+1, clipText(active.Job.Title, 31))))
 		}
 	}
 	return strings.TrimRight(b.String(), "\n")
@@ -596,6 +606,17 @@ func renderNoMessagesState(state game.GameState, styles Styles) []string {
 		lines = append(lines, styles.PanelText.Render("No calls need a response."))
 	}
 	return lines
+}
+
+func selectedPendingRunner(state game.GameState, selected int) (game.Runner, bool) {
+	if len(state.Runners) == 0 {
+		return game.Runner{}, false
+	}
+	runner := state.Runners[clampIndex(selected, len(state.Runners))]
+	if runnerLoad(state, runner.ID) > 0 && runner.State == game.RunnerOnJob {
+		return runner, true
+	}
+	return game.Runner{}, false
 }
 
 func panel(title string, body string, width int, height int, focused bool, styles Styles) string {

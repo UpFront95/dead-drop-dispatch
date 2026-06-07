@@ -186,7 +186,7 @@ Promote the dashboard from a display surface into the primary command center for
 | [x] | TUI-06 | P1 | **DONE (2026-06-07).** Added phase-aware empty states for no posted jobs and no messages plus clearer runner detail copy for no active assignments, with render smoke coverage. |
 | [ ] | TUI-07 | P2 | Add confirmation prompts for risky actions. |
 | [x] | TUI-08 | P2 | **DONE (2026-06-07).** Added a right-aligned header `NEXT` chip and a compact center spacer strip showing current action, selected job risk factors, selected route summary, and notices without adding a new panel. |
-| [ ] | TUI-09 | P2 | Add visual indication of bundled jobs in every relevant view. |
+| [x] | TUI-09 | P2 | **DONE (2026-06-07).** Added compact `B1`/`B2` bundle markers in the runner roster, `Bundle n/2` detail headers with penalty display, and pending-assignment cues when the selected runner would bundle or is full, with render smoke coverage. |
 | [ ] | TUI-10 | P1 | Improve panel sizing across narrow and wide terminals. |
 | [ ] | TUI-11 | P1 | Improve help text once the loop input model is final. |
 | [ ] | TUI-12 | P2 | Render an ASCII district map or route topology that makes district-to-district choices legible. |
