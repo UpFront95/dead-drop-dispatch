@@ -41,6 +41,7 @@ type Model struct {
 	selectedJobIndex   int
 	selectedRunner     int
 	selectedRouteIndex int
+	messageScroll      int
 	notice             string
 	showDistrictBrief  bool
 	showHelp           bool
@@ -122,6 +123,7 @@ func (m Model) View() tea.View {
 		SelectedJobIndex:   m.selectedJobIndex,
 		SelectedRunner:     m.selectedRunner,
 		SelectedRouteIndex: m.selectedRouteIndex,
+		MessageScroll:      m.messageScroll,
 		Notice:             m.notice,
 		ShowDistrictBrief:  m.showDistrictBrief,
 		ShowHelp:           m.showHelp,
@@ -140,6 +142,8 @@ func (m *Model) moveSelection(delta int) {
 		m.selectedRunner = wrapIndex(m.selectedRunner+delta, len(m.state.Runners))
 	case PanelDetail:
 		m.selectedRouteIndex = wrapIndex(m.selectedRouteIndex+delta, pendingRouteCount(m.state))
+	case PanelMessages:
+		m.messageScroll = maxInt(0, m.messageScroll+delta)
 	}
 }
 
@@ -265,4 +269,11 @@ func runnerLoad(state game.GameState, runnerID game.RunnerID) int {
 		}
 	}
 	return load
+}
+
+func maxInt(a int, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }

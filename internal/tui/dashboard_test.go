@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -187,6 +188,47 @@ func TestRenderDashboardEmptyStatesAreActionable(t *testing.T) {
 	}
 }
 
+func TestRenderDashboardMessageFeedScrollsWithoutGrowing(t *testing.T) {
+	state := content.InitialGameState(42)
+	state.Messages = manyMessages(24)
+
+	view := RenderDashboard(DashboardView{
+		State:         state,
+		Width:         TargetWidth,
+		Height:        TargetHeight,
+		Focused:       focusMessages,
+		MessageScroll: 20,
+		Styles:        NewStyles(),
+	})
+
+	content := ansi.Strip(view.Content)
+	for _, want := range []string{
+		"MESSAGE FEED",
+		"body-12",
+		"body-17",
+	} {
+		if !strings.Contains(content, want) {
+			t.Fatalf("rendered scrolled message feed missing %q", want)
+		}
+	}
+	for _, unwanted := range []string{
+		"body-01",
+		"body-02",
+	} {
+		if strings.Contains(content, unwanted) {
+			t.Fatalf("rendered scrolled message feed unexpectedly contained %q", unwanted)
+		}
+	}
+
+	if got := lineCount(content); got != TargetHeight {
+		t.Fatalf("rendered scrolled message feed height = %d, want %d", got, TargetHeight)
+	}
+
+	if got := maxLineWidth(content); got > TargetWidth {
+		t.Fatalf("rendered scrolled message feed width = %d, want <= %d", got, TargetWidth)
+	}
+}
+
 func TestRenderDashboardShowsBundleMarkers(t *testing.T) {
 	state := bundledDashboardState()
 
@@ -245,6 +287,19 @@ func TestRenderDashboardShowsPendingBundleCue(t *testing.T) {
 			t.Fatalf("rendered pending bundle cue missing %q", want)
 		}
 	}
+}
+
+func manyMessages(count int) []game.Message {
+	messages := make([]game.Message, 0, count)
+	for i := 1; i <= count; i++ {
+		messages = append(messages, game.Message{
+			Turn:    i,
+			From:    "switchboard",
+			Subject: fmt.Sprintf("subject-%02d", i),
+			Body:    fmt.Sprintf("body-%02d", i),
+		})
+	}
+	return messages
 }
 
 func runnerLines(content string) string {

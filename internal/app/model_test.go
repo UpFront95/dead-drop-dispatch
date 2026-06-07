@@ -94,6 +94,29 @@ func TestModelOpensAndClosesDistrictBriefing(t *testing.T) {
 	}
 }
 
+func TestModelScrollsMessageFeedWhenFocused(t *testing.T) {
+	model := New(99)
+	model.focused = PanelMessages
+
+	updated, _ := model.Update(keyPress("down"))
+	model = updated.(Model)
+	if model.messageScroll != 1 {
+		t.Fatalf("message scroll = %d, want 1", model.messageScroll)
+	}
+
+	updated, _ = model.Update(keyPress("up"))
+	model = updated.(Model)
+	if model.messageScroll != 0 {
+		t.Fatalf("message scroll after up = %d, want 0", model.messageScroll)
+	}
+
+	updated, _ = model.Update(keyPress("up"))
+	model = updated.(Model)
+	if model.messageScroll != 0 {
+		t.Fatalf("message scroll should not go below 0, got %d", model.messageScroll)
+	}
+}
+
 func TestModelAcceptsAndAssignsJobFromDashboard(t *testing.T) {
 	model := New(99)
 	model.focused = PanelJobs

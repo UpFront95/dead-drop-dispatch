@@ -28,6 +28,7 @@ type DashboardView struct {
 	SelectedJobIndex   int
 	SelectedRunner     int
 	SelectedRouteIndex int
+	MessageScroll      int
 	Notice             string
 	ShowDistrictBrief  bool
 	ShowHelp           bool
@@ -98,7 +99,7 @@ func renderDashboardBody(view DashboardView, width int, bodyHeight int, styles S
 	runners := panel("RUNNERS", renderRunners(view.State, view.SelectedRunner, styles), midW, topH, view.Focused == focusRunners, styles)
 	jobs := panel("JOB BOARD", renderJobs(view.State, view.SelectedJobIndex, styles), rightW, topH, view.Focused == focusJobs, styles)
 
-	messages := panel("MESSAGE FEED", renderMessages(view.State, styles), leftW+midW+gap, bottomH, view.Focused == focusMessages, styles)
+	messages := panel("MESSAGE FEED", renderMessages(view.State, view.MessageScroll, panelBodyHeight(styles.Panel, bottomH), styles), leftW+midW+gap, bottomH, view.Focused == focusMessages, styles)
 	detail := panel("DETAIL", renderDetail(view.State, view.Focused, view.SelectedJobIndex, view.SelectedRunner, view.SelectedRouteIndex, view.Notice, styles), rightW, bottomH, view.Focused == focusDetail, styles)
 
 	top := lipgloss.JoinHorizontal(lipgloss.Top, city, strings.Repeat(" ", gap), runners, strings.Repeat(" ", gap), jobs)
@@ -591,22 +592,22 @@ func renderRunners(state game.GameState, selected int, styles Styles) string {
 	return strings.TrimRight(b.String(), "\n")
 }
 
-func renderMessages(state game.GameState, styles Styles) string {
+func renderMessages(state game.GameState, scroll int, visibleLines int, styles Styles) string {
 	if len(state.Messages) == 0 {
 		return strings.Join(renderNoMessagesState(state, styles), "\n")
 	}
 
-	var b strings.Builder
+	lines := []string{}
 	for _, message := range state.Messages {
-		fmt.Fprintf(&b, "%s%s%s%s\n",
+		lines = append(lines, lipgloss.JoinHorizontal(lipgloss.Left,
 			styles.PanelText.Render(fmt.Sprintf("[%02d] ", message.Turn)),
 			styles.Accent.Render(message.From),
 			styles.PanelText.Render(" / "),
 			styles.PanelText.Render(message.Subject),
-		)
-		fmt.Fprintln(&b, styles.PanelText.Render(fmt.Sprintf("     %s", message.Body)))
+		))
+		lines = append(lines, styles.PanelText.Render(fmt.Sprintf("     %s", message.Body)))
 	}
-	return strings.TrimRight(b.String(), "\n")
+	return strings.Join(scrolledLines(lines, scroll, visibleLines), "\n")
 }
 
 func renderNoActiveAssignmentState(state game.GameState, runner game.Runner, styles Styles) []string {
@@ -665,10 +666,39 @@ func panel(title string, body string, width int, height int, focused bool, style
 		style = styles.PanelFocus
 	}
 
-	frameW, _ := style.GetFrameSize()
+	frameW, frameH := style.GetFrameSize()
 	contentW := max(1, width-frameW)
+	bodyH := max(0, height-frameH-2)
+	body = strings.Join(fitLines(strings.Split(body, "\n"), bodyH), "\n")
 	content := styles.PanelTitle.Render(title) + "\n" + styles.Divider.Render(strings.Repeat("─", contentW)) + "\n" + body
 	return style.Width(width).Height(height).Render(content)
+}
+
+func panelBodyHeight(style lipgloss.Style, height int) int {
+	_, frameH := style.GetFrameSize()
+	return max(0, height-frameH-2)
+}
+
+func scrolledLines(lines []string, scroll int, visible int) []string {
+	if visible <= 0 {
+		return nil
+	}
+	if len(lines) <= visible {
+		return lines
+	}
+	maxScroll := len(lines) - visible
+	scroll = clampInt(scroll, 0, maxScroll)
+	return lines[scroll : scroll+visible]
+}
+
+func fitLines(lines []string, height int) []string {
+	if height <= 0 {
+		return nil
+	}
+	if len(lines) > height {
+		return lines[:height]
+	}
+	return lines
 }
 
 func districtNames(state game.GameState) map[game.DistrictID]string {
@@ -847,6 +877,16 @@ func clampIndex(index int, length int) int {
 		return length - 1
 	}
 	return index
+}
+
+func clampInt(value int, minValue int, maxValue int) int {
+	if value < minValue {
+		return minValue
+	}
+	if value > maxValue {
+		return maxValue
+	}
+	return value
 }
 
 func runnerLoad(state game.GameState, runnerID game.RunnerID) int {
