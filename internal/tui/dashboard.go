@@ -28,6 +28,8 @@ type DashboardView struct {
 	SelectedJobIndex   int
 	SelectedRunner     int
 	SelectedRouteIndex int
+	SelectedMessage    int
+	SelectedResponse   int
 	MessageScroll      int
 	Notice             string
 	ShowDistrictBrief  bool
@@ -99,8 +101,8 @@ func renderDashboardBody(view DashboardView, width int, bodyHeight int, styles S
 	runners := panel("RUNNERS", renderRunners(view.State, view.SelectedRunner, styles), midW, topH, view.Focused == focusRunners, styles)
 	jobs := panel("JOB BOARD", renderJobs(view.State, view.SelectedJobIndex, styles), rightW, topH, view.Focused == focusJobs, styles)
 
-	messages := panel("MESSAGE FEED", renderMessages(view.State, view.MessageScroll, panelBodyHeight(styles.Panel, bottomH), styles), leftW+midW+gap, bottomH, view.Focused == focusMessages, styles)
-	detail := panel("DETAIL", renderDetail(view.State, view.Focused, view.SelectedJobIndex, view.SelectedRunner, view.SelectedRouteIndex, view.Notice, styles), rightW, bottomH, view.Focused == focusDetail, styles)
+	messages := panel("MESSAGE FEED", renderMessages(view.State, view.SelectedMessage, view.MessageScroll, panelBodyHeight(styles.Panel, bottomH), styles), leftW+midW+gap, bottomH, view.Focused == focusMessages, styles)
+	detail := panel("DETAIL", renderDetail(view.State, view.Focused, view.SelectedJobIndex, view.SelectedRunner, view.SelectedRouteIndex, view.SelectedMessage, view.SelectedResponse, view.Notice, styles), rightW, bottomH, view.Focused == focusDetail, styles)
 
 	top := lipgloss.JoinHorizontal(lipgloss.Top, city, strings.Repeat(" ", gap), runners, strings.Repeat(" ", gap), jobs)
 	bottom := lipgloss.JoinHorizontal(lipgloss.Top, messages, strings.Repeat(" ", gap), detail)
@@ -245,6 +247,13 @@ func compactActionLine(view DashboardView) string {
 	}
 	if view.Notice != "" {
 		parts = append(parts, "NOTE "+view.Notice)
+	}
+	if message, ok := currentMessage(view.State, view.SelectedMessage); ok && message.Status != game.MessageResolved && message.Audience != "" {
+		responses := messageResponseOptions(message)
+		if len(responses) > 0 {
+			response := responses[clampIndex(view.SelectedResponse, len(responses))]
+			parts = append(parts, "REPLY "+response.Label)
+		}
 	}
 	return strings.Join(parts, "  |  ")
 }
@@ -444,7 +453,7 @@ func renderNoJobsState(state game.GameState, styles Styles) []string {
 	return lines
 }
 
-func renderDetail(state game.GameState, focused int, selectedJob int, selectedRunner int, selectedRoute int, notice string, styles Styles) string {
+func renderDetail(state game.GameState, focused int, selectedJob int, selectedRunner int, selectedRoute int, selectedMessage int, selectedResponse int, notice string, styles Styles) string {
 	if len(state.AcceptedJobs) > 0 {
 		return renderAcceptedJobDetail(state, state.AcceptedJobs[0], selectedRunner, selectedRoute, notice, styles)
 	}
@@ -453,6 +462,9 @@ func renderDetail(state game.GameState, focused int, selectedJob int, selectedRu
 	}
 	if len(state.Runners) > 0 && focused == focusRunners {
 		return renderRunnerDetail(state, state.Runners[clampIndex(selectedRunner, len(state.Runners))], notice, styles)
+	}
+	if focused == focusMessages {
+		return renderMessageDetail(state, selectedMessage, selectedResponse, notice, styles)
 	}
 
 	lines := []string{
@@ -592,22 +604,88 @@ func renderRunners(state game.GameState, selected int, styles Styles) string {
 	return strings.TrimRight(b.String(), "\n")
 }
 
-func renderMessages(state game.GameState, scroll int, visibleLines int, styles Styles) string {
+func renderMessages(state game.GameState, selected int, scroll int, visibleLines int, styles Styles) string {
 	if len(state.Messages) == 0 {
 		return strings.Join(renderNoMessagesState(state, styles), "\n")
 	}
 
 	lines := []string{}
-	for _, message := range state.Messages {
+	selected = clampIndex(selected, len(state.Messages))
+	for i, message := range state.Messages {
+		marker := " "
+		if i == selected {
+			marker = ">"
+		}
+		status := ""
+		if message.Status == game.MessageResolved {
+			status = " done"
+		} else if message.Audience != "" {
+			status = " open"
+		}
 		lines = append(lines, lipgloss.JoinHorizontal(lipgloss.Left,
+			styles.PanelText.Render(marker),
 			styles.PanelText.Render(fmt.Sprintf("[%02d] ", message.Turn)),
 			styles.Accent.Render(message.From),
 			styles.PanelText.Render(" / "),
 			styles.PanelText.Render(message.Subject),
+			styles.Muted.Render(status),
 		))
 		lines = append(lines, styles.PanelText.Render(fmt.Sprintf("     %s", message.Body)))
 	}
 	return strings.Join(scrolledLines(lines, scroll, visibleLines), "\n")
+}
+
+func renderMessageDetail(state game.GameState, selected int, selectedResponse int, notice string, styles Styles) string {
+	message, ok := currentMessage(state, selected)
+	if !ok {
+		return strings.Join(renderNoMessagesState(state, styles), "\n")
+	}
+
+	lines := []string{}
+	if notice != "" {
+		lines = append(lines, styles.Warning.Render(notice), styles.PanelText.Render(" "))
+	}
+	lines = append(lines,
+		styles.Accent.Render(message.Subject),
+		styles.PanelText.Render(fmt.Sprintf("From: %s", message.From)),
+		styles.PanelText.Render(fmt.Sprintf("Audience: %s", formatMessageAudience(message.Audience))),
+		styles.PanelText.Render(" "),
+	)
+	for _, line := range wrapText(message.Body, 40, 2) {
+		lines = append(lines, styles.PanelText.Render(line))
+	}
+	if message.Status == game.MessageResolved {
+		lines = append(lines, styles.PanelText.Render(" "), styles.Accent.Render("Resolved"))
+		if message.ResolvedBy != "" {
+			lines = append(lines, styles.PanelText.Render("By: "+formatResponseID(message.ResolvedBy)))
+		}
+		if message.Summary != "" {
+			lines = append(lines, styles.Muted.Render(clipText(message.Summary, 40)))
+		}
+		for _, effect := range message.ResolutionEffects {
+			lines = append(lines, styles.Warning.Render("  "+effect))
+		}
+		return strings.Join(lines, "\n")
+	}
+
+	responses := messageResponseOptions(message)
+	if len(responses) == 0 {
+		lines = append(lines, styles.PanelText.Render(" "), styles.Muted.Render("No response required."))
+		return strings.Join(lines, "\n")
+	}
+
+	lines = append(lines, styles.PanelText.Render(" "), styles.Accent.Render("Responses"))
+	selectedResponse = clampIndex(selectedResponse, len(responses))
+	for i, response := range responses {
+		marker := " "
+		if i == selectedResponse {
+			marker = ">"
+		}
+		lines = append(lines, styles.PanelText.Render(marker+" "+response.Label))
+		lines = append(lines, styles.Muted.Render("  "+clipText(response.Description, 38)))
+	}
+	lines = append(lines, styles.PanelText.Render(" "), styles.Muted.Render("r cycles response, enter sends."))
+	return strings.Join(lines, "\n")
 }
 
 func renderNoActiveAssignmentState(state game.GameState, runner game.Runner, styles Styles) []string {
@@ -658,6 +736,23 @@ func selectedPendingRunner(state game.GameState, selected int) (game.Runner, boo
 		return runner, true
 	}
 	return game.Runner{}, false
+}
+
+func currentMessage(state game.GameState, selected int) (game.Message, bool) {
+	if len(state.Messages) == 0 {
+		return game.Message{}, false
+	}
+	return state.Messages[clampIndex(selected, len(state.Messages))], true
+}
+
+func messageResponseOptions(message game.Message) []game.MessageResponseAction {
+	if message.Status == game.MessageResolved || message.Audience == "" {
+		return nil
+	}
+	if len(message.Responses) > 0 {
+		return message.Responses
+	}
+	return game.MessageResponseActionsFor(message.Audience)
 }
 
 func panel(title string, body string, width int, height int, focused bool, styles Styles) string {
@@ -724,6 +819,20 @@ func formatCargo(cargo game.CargoType) string {
 	default:
 		return strings.ReplaceAll(string(cargo), "_", " ")
 	}
+}
+
+func formatMessageAudience(audience game.MessageAudience) string {
+	if audience == "" {
+		return "none"
+	}
+	return strings.ReplaceAll(string(audience), "_", " ")
+}
+
+func formatResponseID(responseID game.MessageResponseActionID) string {
+	if response, ok := game.MessageResponseActionFor(responseID); ok {
+		return response.Label
+	}
+	return strings.ReplaceAll(string(responseID), "_", " ")
 }
 
 func shortFactor(factor string) string {

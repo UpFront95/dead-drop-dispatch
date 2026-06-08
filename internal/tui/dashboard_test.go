@@ -193,12 +193,13 @@ func TestRenderDashboardMessageFeedScrollsWithoutGrowing(t *testing.T) {
 	state.Messages = manyMessages(24)
 
 	view := RenderDashboard(DashboardView{
-		State:         state,
-		Width:         TargetWidth,
-		Height:        TargetHeight,
-		Focused:       focusMessages,
-		MessageScroll: 20,
-		Styles:        NewStyles(),
+		State:           state,
+		Width:           TargetWidth,
+		Height:          TargetHeight,
+		Focused:         focusMessages,
+		SelectedMessage: 12,
+		MessageScroll:   20,
+		Styles:          NewStyles(),
 	})
 
 	content := ansi.Strip(view.Content)
@@ -226,6 +227,57 @@ func TestRenderDashboardMessageFeedScrollsWithoutGrowing(t *testing.T) {
 
 	if got := maxLineWidth(content); got > TargetWidth {
 		t.Fatalf("rendered scrolled message feed width = %d, want <= %d", got, TargetWidth)
+	}
+}
+
+func TestRenderDashboardShowsMessageResponses(t *testing.T) {
+	state := content.InitialGameState(42)
+	state.Messages = []game.Message{{
+		ID:       "runner-check",
+		Turn:     state.Turn,
+		From:     "mira",
+		Subject:  "runner check",
+		Body:     "Need a call before the route moves.",
+		Audience: game.MessageAudienceRunner,
+		Status:   game.MessageOpen,
+		Responses: []game.MessageResponseAction{
+			mustDashboardResponseAction(t, game.ResponseAskMoreInfo),
+			mustDashboardResponseAction(t, game.ResponseReassure),
+		},
+	}}
+
+	view := RenderDashboard(DashboardView{
+		State:            state,
+		Width:            TargetWidth,
+		Height:           TargetHeight,
+		Focused:          focusMessages,
+		SelectedMessage:  0,
+		SelectedResponse: 1,
+		Styles:           NewStyles(),
+	})
+
+	content := ansi.Strip(view.Content)
+	for _, want := range []string{
+		">[01] mira / runner check open",
+		"REPLY Reassure",
+		"Audience: runner",
+		"Responses",
+		"  Ask more info",
+		"> Reassure",
+		"Calm the contact",
+		"r cycles response, enter sends.",
+	} {
+		if !strings.Contains(content, want) {
+			t.Fatalf("rendered message responses missing %q", want)
+		}
+	}
+
+	if got := lineCount(content); got != TargetHeight {
+		t.Fatalf("rendered message response dashboard height = %d, want %d", got, TargetHeight)
+	}
+
+	if got := maxLineWidth(content); got > TargetWidth {
+		t.Fatalf("rendered message response dashboard width = %d, want <= %d", got, TargetWidth)
 	}
 }
 
@@ -260,6 +312,15 @@ func TestRenderDashboardShowsBundleMarkers(t *testing.T) {
 	if got := maxLineWidth(content); got > TargetWidth {
 		t.Fatalf("rendered bundled dashboard width = %d, want <= %d", got, TargetWidth)
 	}
+}
+
+func mustDashboardResponseAction(t *testing.T, actionID game.MessageResponseActionID) game.MessageResponseAction {
+	t.Helper()
+	action, ok := game.MessageResponseActionFor(actionID)
+	if !ok {
+		t.Fatalf("missing response action %s", actionID)
+	}
+	return action
 }
 
 func TestRenderDashboardShowsPendingBundleCue(t *testing.T) {

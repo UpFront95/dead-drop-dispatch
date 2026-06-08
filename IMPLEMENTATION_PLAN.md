@@ -194,7 +194,7 @@ Promote the dashboard from a display surface into the primary command center for
 | [ ] | TUI-12 | P2 | Render an ASCII district map or route topology that makes district-to-district choices legible. |
 | [ ] | TUI-13 | P2 | Add progress and status indicators for night, turn, deadlines, active jobs, runner state, cargo integrity, and heat. |
 | [ ] | TUI-14 | P1 | Format event logs as timestamped diegetic terminal output with clear outcome and cause text. |
-| [ ] | TUI-15 | P1 | Expose fixed message and response actions from MSG-01 where the dashboard or message screen needs them. |
+| [x] | TUI-15 | P1 | **DONE (2026-06-08).** Exposed fixed message response actions from the dashboard message feed with message selection, response cycling, enter-to-send resolution, action-strip reply cues, message detail rendering, and app/render tests. |
 | [x] | TUI-16 | P1 | **DONE (2026-06-07).** Added in-panel city sector briefings: city focus can select districts, `enter` opens a same-panel briefing with district description, control, stats, pressure, signal, and job-touch count, and `esc` returns to the sector list. |
 
 ## Phase 6 — Persistence And Offline Fiction

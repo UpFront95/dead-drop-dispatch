@@ -41,6 +41,8 @@ type Model struct {
 	selectedJobIndex   int
 	selectedRunner     int
 	selectedRouteIndex int
+	selectedMessage    int
+	selectedResponse   int
 	messageScroll      int
 	notice             string
 	showDistrictBrief  bool
@@ -123,6 +125,8 @@ func (m Model) View() tea.View {
 		SelectedJobIndex:   m.selectedJobIndex,
 		SelectedRunner:     m.selectedRunner,
 		SelectedRouteIndex: m.selectedRouteIndex,
+		SelectedMessage:    m.selectedMessage,
+		SelectedResponse:   m.selectedResponse,
 		MessageScroll:      m.messageScroll,
 		Notice:             m.notice,
 		ShowDistrictBrief:  m.showDistrictBrief,
@@ -143,7 +147,9 @@ func (m *Model) moveSelection(delta int) {
 	case PanelDetail:
 		m.selectedRouteIndex = wrapIndex(m.selectedRouteIndex+delta, pendingRouteCount(m.state))
 	case PanelMessages:
-		m.messageScroll = maxInt(0, m.messageScroll+delta)
+		m.selectedMessage = wrapIndex(m.selectedMessage+delta, len(m.state.Messages))
+		m.messageScroll = maxInt(0, m.selectedMessage-3)
+		m.selectedResponse = 0
 	}
 }
 
@@ -155,6 +161,8 @@ func (m *Model) confirmSelection() {
 		m.acceptSelectedJob()
 	case PanelRunners:
 		m.assignPendingJob()
+	case PanelMessages:
+		m.respondToSelectedMessage()
 	default:
 		m.notice = "Focus JOB BOARD to accept, RUNNERS to assign."
 	}
@@ -228,6 +236,11 @@ func (m *Model) assignPendingJob() {
 }
 
 func (m *Model) cycleRoute() {
+	if m.focused == PanelMessages {
+		m.selectedResponse = wrapIndex(m.selectedResponse+1, selectedMessageResponseCount(m.state, m.selectedMessage))
+		m.notice = ""
+		return
+	}
 	m.selectedRouteIndex = wrapIndex(m.selectedRouteIndex+1, pendingRouteCount(m.state))
 	m.notice = ""
 }
@@ -235,6 +248,8 @@ func (m *Model) cycleRoute() {
 func (m *Model) advanceTurnPhase() {
 	advance := game.AdvanceTurnPhase(&m.state)
 	m.selectedRouteIndex = 0
+	m.selectedMessage = wrapIndex(m.selectedMessage, len(m.state.Messages))
+	m.selectedResponse = 0
 	results := advance.Results
 	if len(results) == 1 {
 		m.notice = "Resolved " + results[0].JobTitle + ": " + string(results[0].Outcome) + "."
@@ -243,11 +258,50 @@ func (m *Model) advanceTurnPhase() {
 	m.notice = advance.Summary
 }
 
+func (m *Model) respondToSelectedMessage() {
+	if len(m.state.Messages) == 0 {
+		m.notice = "No messages to answer."
+		return
+	}
+	messageIndex := wrapIndex(m.selectedMessage, len(m.state.Messages))
+	message := m.state.Messages[messageIndex]
+	responses := messageResponseOptions(message)
+	if len(responses) == 0 {
+		m.notice = "Selected message has no open response."
+		return
+	}
+	response := responses[wrapIndex(m.selectedResponse, len(responses))]
+	if _, err := game.ResolveMessageResponse(&m.state, message.ID, response.ID); err != nil {
+		m.notice = err.Error()
+		return
+	}
+	m.selectedMessage = messageIndex
+	m.selectedResponse = 0
+	m.notice = "Sent response: " + response.Label + "."
+}
+
 func pendingRouteCount(state game.GameState) int {
 	if len(state.AcceptedJobs) == 0 {
 		return 0
 	}
 	return len(state.AcceptedJobs[0].Routes)
+}
+
+func selectedMessageResponseCount(state game.GameState, selected int) int {
+	if len(state.Messages) == 0 {
+		return 0
+	}
+	return len(messageResponseOptions(state.Messages[wrapIndex(selected, len(state.Messages))]))
+}
+
+func messageResponseOptions(message game.Message) []game.MessageResponseAction {
+	if message.Status == game.MessageResolved || message.Audience == "" {
+		return nil
+	}
+	if len(message.Responses) > 0 {
+		return append([]game.MessageResponseAction(nil), message.Responses...)
+	}
+	return game.MessageResponseActionsFor(message.Audience)
 }
 
 func wrapIndex(index int, length int) int {

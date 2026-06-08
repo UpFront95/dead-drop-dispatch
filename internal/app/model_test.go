@@ -97,23 +97,76 @@ func TestModelOpensAndClosesDistrictBriefing(t *testing.T) {
 func TestModelScrollsMessageFeedWhenFocused(t *testing.T) {
 	model := New(99)
 	model.focused = PanelMessages
+	model.state.Messages = append(model.state.Messages, game.Message{
+		ID:       "runner-check",
+		Turn:     model.state.Turn,
+		From:     "mira",
+		Subject:  "runner check",
+		Body:     "Need a call.",
+		Audience: game.MessageAudienceRunner,
+		Status:   game.MessageOpen,
+	})
 
 	updated, _ := model.Update(keyPress("down"))
 	model = updated.(Model)
-	if model.messageScroll != 1 {
-		t.Fatalf("message scroll = %d, want 1", model.messageScroll)
+	if model.selectedMessage != 1 {
+		t.Fatalf("selected message = %d, want 1", model.selectedMessage)
 	}
 
 	updated, _ = model.Update(keyPress("up"))
 	model = updated.(Model)
-	if model.messageScroll != 0 {
-		t.Fatalf("message scroll after up = %d, want 0", model.messageScroll)
+	if model.selectedMessage != 0 {
+		t.Fatalf("selected message after up = %d, want 0", model.selectedMessage)
 	}
 
 	updated, _ = model.Update(keyPress("up"))
 	model = updated.(Model)
-	if model.messageScroll != 0 {
-		t.Fatalf("message scroll should not go below 0, got %d", model.messageScroll)
+	if model.selectedMessage != 1 {
+		t.Fatalf("selected message should wrap, got %d", model.selectedMessage)
+	}
+}
+
+func TestModelRespondsToSelectedMessageFromDashboard(t *testing.T) {
+	model := New(99)
+	model.focused = PanelMessages
+	model.state.Messages = []game.Message{{
+		ID:       "runner-check",
+		Turn:     model.state.Turn,
+		From:     "mira",
+		Subject:  "runner check",
+		Body:     "Need a call.",
+		Audience: game.MessageAudienceRunner,
+		Status:   game.MessageOpen,
+		Responses: []game.MessageResponseAction{
+			mustResponseAction(t, game.ResponseAskMoreInfo),
+			mustResponseAction(t, game.ResponseReassure),
+		},
+		TargetRunnerID: model.state.Runners[0].ID,
+	}}
+
+	updated, _ := model.Update(keyPress("r"))
+	model = updated.(Model)
+	if model.selectedResponse != 1 {
+		t.Fatalf("selected response = %d, want 1", model.selectedResponse)
+	}
+
+	updated, _ = model.Update(keyPress("enter"))
+	model = updated.(Model)
+
+	if got, want := model.state.Messages[0].Status, game.MessageResolved; got != want {
+		t.Fatalf("message status = %q, want %q", got, want)
+	}
+	if got, want := model.state.Messages[0].ResolvedBy, game.ResponseReassure; got != want {
+		t.Fatalf("resolved by = %q, want %q", got, want)
+	}
+	if model.notice != "Sent response: Reassure." {
+		t.Fatalf("notice = %q", model.notice)
+	}
+	if got, want := model.state.Runners[0].Loyalty, 5; got != want {
+		t.Fatalf("runner loyalty = %d, want %d", got, want)
+	}
+	if got, want := model.state.Messages[len(model.state.Messages)-1].Subject, "response resolved"; got != want {
+		t.Fatalf("last message subject = %q, want %q", got, want)
 	}
 }
 
@@ -188,4 +241,13 @@ func containsAcceptedJob(jobs []game.Job, jobID string) bool {
 		}
 	}
 	return false
+}
+
+func mustResponseAction(t *testing.T, actionID game.MessageResponseActionID) game.MessageResponseAction {
+	t.Helper()
+	action, ok := game.MessageResponseActionFor(actionID)
+	if !ok {
+		t.Fatalf("missing response action %s", actionID)
+	}
+	return action
 }
