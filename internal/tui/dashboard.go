@@ -284,7 +284,7 @@ func compactActionLine(view DashboardView) string {
 }
 
 func headerStatusLine(state game.GameState) string {
-	return fmt.Sprintf("N%d/%d T%d/%d C%04d H%02d/%02d I%03d %s %s %s %s",
+	return fmt.Sprintf("N %d/%d T %d/%d C %04d H %02d/%02d I %03d %s %s %s %s",
 		state.Night,
 		state.RunNights,
 		state.Turn,
@@ -350,13 +350,13 @@ func runnerStatusSummary(runners []game.Runner) string {
 		}
 	}
 	if out > 0 {
-		return fmt.Sprintf("RNR%d/%d/%d/%d", ready, busy, injured, out)
+		return fmt.Sprintf("RNR %d/%d/%d/%d", ready, busy, injured, out)
 	}
-	return fmt.Sprintf("RNR%d/%d/%d", ready, busy, injured)
+	return fmt.Sprintf("RNR %d/%d/%d", ready, busy, injured)
 }
 
 func jobStatusSummary(state game.GameState) string {
-	return fmt.Sprintf("JOB%d/%d/%d", len(state.AvailableJobs), len(state.AcceptedJobs), len(state.ActiveJobs))
+	return fmt.Sprintf("JOB %d/%d/%d", len(state.AvailableJobs), len(state.AcceptedJobs), len(state.ActiveJobs))
 }
 
 func deadlineStatusSummary(state game.GameState) string {
@@ -364,7 +364,7 @@ func deadlineStatusSummary(state game.GameState) string {
 	if !ok {
 		return "DUE-"
 	}
-	return fmt.Sprintf("DUE%dT", deadline)
+	return fmt.Sprintf("DUE %dT", deadline)
 }
 
 func nearestDeadline(state game.GameState) (int, bool) {
@@ -396,7 +396,7 @@ func cargoStatusSummary(state game.GameState) string {
 	if !ok {
 		return "CG--"
 	}
-	return fmt.Sprintf("CG%d%%", cargo)
+	return fmt.Sprintf("CG %d%%", cargo)
 }
 
 func currentCargoIntegrity(state game.GameState) (int, bool) {

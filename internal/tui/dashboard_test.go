@@ -89,13 +89,13 @@ func TestRenderDashboardShowsProgressStatusIndicators(t *testing.T) {
 
 	content := ansi.Strip(view.Content)
 	for _, want := range []string{
-		"N1/7",
-		"T1/6",
-		"H07/10",
-		"RNR1/1/1",
-		"JOB0/1/1",
-		"DUE1T",
-		"CG65%",
+		"N 1/7",
+		"T 1/6",
+		"H 07/10",
+		"RNR 1/1/1",
+		"JOB 0/1/1",
+		"DUE 1T",
+		"CG 65%",
 	} {
 		if !strings.Contains(content, want) {
 			t.Fatalf("rendered dashboard status missing %q", want)
