@@ -192,7 +192,7 @@ Promote the dashboard from a display surface into the primary command center for
 | [ ] | TUI-10 | P1 | Improve panel sizing across narrow and wide terminals. |
 | [ ] | TUI-11 | P1 | Improve help text once the loop input model is final. |
 | [x] | TUI-12 | P2 | **DONE (2026-06-09).** Added a routing tab with ASCII district topology, selected job origin/destination markers, selected route detail, path summaries, and render smoke coverage. |
-| [ ] | TUI-13 | P2 | Add progress and status indicators for night, turn, deadlines, active jobs, runner state, cargo integrity, and heat. |
+| [x] | TUI-13 | P2 | **DONE (2026-06-09).** Added compact header indicators for night, turn, credits, heat, dispatch integrity, runner availability, job counts, nearest deadline, and cargo integrity with render smoke coverage. |
 | [ ] | TUI-14 | P1 | Format event logs as timestamped diegetic terminal output with clear outcome and cause text. |
 | [x] | TUI-15 | P1 | **DONE (2026-06-08).** Exposed fixed message response actions from the dashboard message feed with message selection, response cycling, enter-to-send resolution, action-strip reply cues, message detail rendering, and app/render tests. |
 | [x] | TUI-16 | P1 | **DONE (2026-06-07).** Added in-panel city sector briefings: city focus can select districts, `enter` opens a same-panel briefing with district description, control, stats, pressure, signal, and job-touch count, and `esc` returns to the sector list. |

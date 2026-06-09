@@ -96,8 +96,8 @@ func renderDashboardBody(view DashboardView, width int, bodyHeight int, styles S
 	}
 	if bottomH < 8 {
 		bottomH = 8
-		topH = bodyHeight - bottomH
 		spacerH = 0
+		topH = bodyHeight - bottomH
 	}
 
 	city := panel("CITY SECTOR", renderCity(view.State, view.SelectedDistrict, view.ShowDistrictBrief, styles), leftW, topH, view.Focused == focusCity, styles)
@@ -192,15 +192,7 @@ func padLinesRight(value string, width int) string {
 func renderHeader(view DashboardView, width int, styles Styles) string {
 	state := view.State
 	title := styles.Title.Render("DEAD DROP DISPATCH")
-	status := fmt.Sprintf("NIGHT %d/%d  TURN %d/%d  CRED %04d  HEAT %02d  INTEGRITY %03d",
-		state.Night,
-		state.RunNights,
-		state.Turn,
-		state.TurnsPerNight,
-		state.Credits,
-		state.Heat,
-		state.DispatchIntegrity,
-	)
+	status := headerStatusLine(state)
 	left := lipgloss.JoinHorizontal(lipgloss.Center, title, "  ", styles.Status.Render(status))
 	prompt := styles.Status.Render(currentActionPrompt(view))
 	space := width - lipgloss.Width(left) - lipgloss.Width(prompt)
@@ -291,6 +283,23 @@ func compactActionLine(view DashboardView) string {
 	return strings.Join(parts, "  |  ")
 }
 
+func headerStatusLine(state game.GameState) string {
+	return fmt.Sprintf("N%d/%d T%d/%d C%04d H%02d/%02d I%03d %s %s %s %s",
+		state.Night,
+		state.RunNights,
+		state.Turn,
+		state.TurnsPerNight,
+		state.Credits,
+		state.Heat,
+		game.MaximumHeat,
+		state.DispatchIntegrity,
+		runnerStatusSummary(state.Runners),
+		jobStatusSummary(state),
+		deadlineStatusSummary(state),
+		cargoStatusSummary(state),
+	)
+}
+
 func currentActionText(view DashboardView) string {
 	state := view.State
 	if hasPendingComplication(state) {
@@ -321,6 +330,93 @@ func currentActionText(view DashboardView) string {
 	default:
 		return "review dashboard"
 	}
+}
+
+func runnerStatusSummary(runners []game.Runner) string {
+	ready := 0
+	busy := 0
+	injured := 0
+	out := 0
+	for _, runner := range runners {
+		switch runner.State {
+		case game.RunnerReady:
+			ready++
+		case game.RunnerOnJob:
+			busy++
+		case game.RunnerInjured:
+			injured++
+		default:
+			out++
+		}
+	}
+	if out > 0 {
+		return fmt.Sprintf("RNR%d/%d/%d/%d", ready, busy, injured, out)
+	}
+	return fmt.Sprintf("RNR%d/%d/%d", ready, busy, injured)
+}
+
+func jobStatusSummary(state game.GameState) string {
+	return fmt.Sprintf("JOB%d/%d/%d", len(state.AvailableJobs), len(state.AcceptedJobs), len(state.ActiveJobs))
+}
+
+func deadlineStatusSummary(state game.GameState) string {
+	deadline, ok := nearestDeadline(state)
+	if !ok {
+		return "DUE-"
+	}
+	return fmt.Sprintf("DUE%dT", deadline)
+}
+
+func nearestDeadline(state game.GameState) (int, bool) {
+	deadline := 0
+	found := false
+	consider := func(value int) {
+		if value <= 0 {
+			return
+		}
+		if !found || value < deadline {
+			deadline = value
+			found = true
+		}
+	}
+	for _, job := range state.AvailableJobs {
+		consider(job.DeadlineTurns)
+	}
+	for _, job := range state.AcceptedJobs {
+		consider(job.DeadlineTurns)
+	}
+	for _, active := range state.ActiveJobs {
+		consider(active.Job.DeadlineTurns)
+	}
+	return deadline, found
+}
+
+func cargoStatusSummary(state game.GameState) string {
+	cargo, ok := currentCargoIntegrity(state)
+	if !ok {
+		return "CG--"
+	}
+	return fmt.Sprintf("CG%d%%", cargo)
+}
+
+func currentCargoIntegrity(state game.GameState) (int, bool) {
+	found := false
+	cargo := game.DefaultCargoIntegrity
+	consider := func(value int) {
+		if !found || value < cargo {
+			cargo = value
+			found = true
+		}
+	}
+	for _, complication := range state.Complications {
+		if complication.Status == game.ComplicationPending && complication.CargoIntegrity > 0 {
+			consider(complication.CargoIntegrity)
+		}
+	}
+	for _, result := range state.LastResults {
+		consider(result.CargoIntegrity)
+	}
+	return cargo, found
 }
 
 func currentDecisionJob(view DashboardView) (game.Job, bool) {

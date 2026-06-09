@@ -57,6 +57,60 @@ func TestRenderDashboardTargetSizeContent(t *testing.T) {
 	}
 }
 
+func TestRenderDashboardShowsProgressStatusIndicators(t *testing.T) {
+	state := content.InitialGameState(42)
+	state.Heat = 7
+	state.AvailableJobs = nil
+	state.AcceptedJobs = []game.Job{testDashboardJob("accepted", "Clinic relay", "northline", "floodglass")}
+	activeJob := testDashboardJob("active", "Data vault", "floodglass", "port_kestrel")
+	activeJob.DeadlineTurns = 1
+	state.ActiveJobs = []game.ActiveJob{{
+		JobID:    activeJob.ID,
+		RunnerID: state.Runners[1].ID,
+		RouteID:  activeJob.Routes[0].ID,
+		Job:      activeJob,
+		Route:    activeJob.Routes[0],
+	}}
+	state.Runners[0].State = game.RunnerReady
+	state.Runners[1].State = game.RunnerOnJob
+	state.Runners[2].State = game.RunnerInjured
+	state.LastResults = []game.JobResult{{
+		JobID:          "last",
+		JobTitle:       "Old drop",
+		CargoIntegrity: 65,
+	}}
+
+	view := RenderDashboard(DashboardView{
+		State:  state,
+		Width:  TargetWidth,
+		Height: TargetHeight,
+		Styles: NewStyles(),
+	})
+
+	content := ansi.Strip(view.Content)
+	for _, want := range []string{
+		"N1/7",
+		"T1/6",
+		"H07/10",
+		"RNR1/1/1",
+		"JOB0/1/1",
+		"DUE1T",
+		"CG65%",
+	} {
+		if !strings.Contains(content, want) {
+			t.Fatalf("rendered dashboard status missing %q", want)
+		}
+	}
+
+	if got := lineCount(content); got != TargetHeight {
+		t.Fatalf("rendered status dashboard height = %d, want %d", got, TargetHeight)
+	}
+
+	if got := maxLineWidth(content); got > TargetWidth {
+		t.Fatalf("rendered status dashboard width = %d, want <= %d", got, TargetWidth)
+	}
+}
+
 func TestRenderDashboardDistrictBriefingStaysInCityPanel(t *testing.T) {
 	view := RenderDashboard(DashboardView{
 		State:             content.InitialGameState(42),
