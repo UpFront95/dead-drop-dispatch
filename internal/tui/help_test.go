@@ -74,7 +74,7 @@ func TestRenderDashboardHelpTabUsesHelpViewContent(t *testing.T) {
 		"advance the turn phase or resolve active runs",
 		"esc",
 		"cancel the pending accepted job",
-		"tab focus   [ and ] tabs   j/k select   enter accept/assign   r route   space resolve   ? more   q quit",
+		"[ and ] tabs   1-4 jump   ? more   esc cancel pending   q quit",
 	} {
 		if !strings.Contains(content, want) {
 			t.Fatalf("rendered dashboard help tab missing %q", want)

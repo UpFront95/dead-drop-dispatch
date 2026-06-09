@@ -184,7 +184,7 @@ Promote the dashboard from a display surface into the primary command center for
 |---|---|---|---|
 | [x] | TUI-03 | P2 | **DONE (2026-06-07).** Dashboard now accepts jobs, assigns runners, cycles selected routes, supports bundling through assignment, advances/resolves turns with `space`, renders pending assignment route detail, and has app-level workflow tests for accept/assign/resolve. |
 | [x] | TUI-04 | P2 | **DONE (2026-06-09).** Narrowed secondary surfaces to a real help view and routing/map view, kept Equipment as a retained scaffold, and kept jobs, runners, messages, log, and factions dashboard-native or contextual. |
-| [ ] | TUI-05 | P2 | Add screen-specific key maps. |
+| [x] | TUI-05 | P2 | **DONE (2026-06-09).** Added active-tab footer key maps for Dashboard, Routing, Equipment, and Help, including compact and expanded `?` help variants with render smoke coverage. |
 | [x] | TUI-06 | P1 | **DONE (2026-06-07).** Added phase-aware empty states for no posted jobs and no messages plus clearer runner detail copy for no active assignments, with render smoke coverage. |
 | [ ] | TUI-07 | P2 | Add confirmation prompts for risky actions. |
 | [x] | TUI-08 | P2 | **DONE (2026-06-07).** Added a right-aligned header `NEXT` chip and a compact center spacer strip showing current action, selected job risk factors, selected route summary, and notices without adding a new panel. |

@@ -54,7 +54,7 @@ func RenderDashboard(view DashboardView) tea.View {
 
 	header := renderHeader(view, width, styles)
 	tabs := renderTabs(dashboardTabs, view.ActiveTab, width, styles)
-	footer := renderFooter(view.ShowHelp, width, styles)
+	footer := renderFooter(view.ActiveTab, view.ShowHelp, width, styles)
 	bodyHeight := height - lipgloss.Height(header) - lipgloss.Height(tabs) - lipgloss.Height(footer)
 	if bodyHeight < 20 {
 		bodyHeight = 20
@@ -349,12 +349,43 @@ func hasPendingComplication(state game.GameState) bool {
 	return false
 }
 
-func renderFooter(showHelp bool, width int, styles Styles) string {
-	text := "tab focus   [ and ] tabs   j/k select   enter accept/assign   r route   space resolve   ? more   q quit"
+func renderFooter(activeTab int, showHelp bool, width int, styles Styles) string {
+	keyMap := footerKeyMap(activeTab)
+	text := keyMap.compact
 	if showHelp {
-		text = "shift+tab prev panel   1-4 jump tabs   arrows move   [ and ] tabs   enter accept/assign   r route   space resolve   ? less"
+		text = keyMap.expanded
 	}
 	return styles.Help.Width(width).Render(text)
+}
+
+type footerKeyMapText struct {
+	compact  string
+	expanded string
+}
+
+func footerKeyMap(activeTab int) footerKeyMapText {
+	switch activeTab {
+	case 1:
+		return footerKeyMapText{
+			compact:  "[ and ] tabs   1-4 jump   r cycle route   space phase   ? more   q quit",
+			expanded: "Routing: r cycles selected route   [ and ] tabs   1-4 jump tabs   space advances phase   esc cancel pending   ? less",
+		}
+	case 2:
+		return footerKeyMapText{
+			compact:  "[ and ] tabs   1-4 jump   equipment scaffold   space phase   ? more   q quit",
+			expanded: "Equipment: scaffold view   [ and ] tabs   1-4 jump tabs   space advances phase   esc cancel pending   ? less",
+		}
+	case helpTabIndex:
+		return footerKeyMapText{
+			compact:  "[ and ] tabs   1-4 jump   ? more   esc cancel pending   q quit",
+			expanded: "Help: read controls   [ and ] tabs   1-4 jump tabs   ? less   esc close footer/cancel pending   q quit",
+		}
+	default:
+		return footerKeyMapText{
+			compact:  "tab focus   [ and ] tabs   j/k select   enter accept/assign   r route   space resolve   ? more   q quit",
+			expanded: "shift+tab prev panel   1-4 jump tabs   arrows move   [ and ] tabs   enter accept/assign   r route   space resolve   ? less",
+		}
+	}
 }
 
 func renderCity(state game.GameState, selected int, briefing bool, styles Styles) string {

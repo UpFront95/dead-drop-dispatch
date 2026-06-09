@@ -444,7 +444,7 @@ func TestRenderDashboardPlaceholderTabLeavesBodyBlank(t *testing.T) {
 	for _, want := range []string{
 		"DEAD DROP DISPATCH",
 		"EQUIPMENT",
-		"tab focus   [ and ] tabs   j/k select   enter accept/assign   r route   space resolve   ? more   q quit",
+		"[ and ] tabs   1-4 jump   equipment scaffold   space phase   ? more   q quit",
 	} {
 		if !strings.Contains(content, want) {
 			t.Fatalf("rendered placeholder tab missing %q", want)
@@ -496,6 +496,7 @@ func TestRenderDashboardRoutingTabUsesTopology(t *testing.T) {
 		"[D]",
 		state.AvailableJobs[0].Title,
 		"Route options",
+		"[ and ] tabs   1-4 jump   r cycle route   space phase   ? more   q quit",
 	} {
 		if !strings.Contains(content, want) {
 			t.Fatalf("rendered routing tab missing %q", want)
@@ -550,6 +551,86 @@ func TestRenderDashboardHelpFooterShowsExpandedShortcuts(t *testing.T) {
 		if strings.Contains(content, repeated) {
 			t.Fatalf("rendered help footer repeated compact hint %q", repeated)
 		}
+	}
+}
+
+func TestRenderDashboardFooterUsesScreenSpecificKeyMaps(t *testing.T) {
+	tests := []struct {
+		name      string
+		activeTab int
+		showHelp  bool
+		want      []string
+		unwanted  []string
+	}{
+		{
+			name:      "dashboard compact",
+			activeTab: 0,
+			want: []string{
+				"tab focus",
+				"enter accept/assign",
+				"space resolve",
+			},
+			unwanted: []string{"equipment scaffold"},
+		},
+		{
+			name:      "routing expanded",
+			activeTab: 1,
+			showHelp:  true,
+			want: []string{
+				"Routing:",
+				"r cycles selected route",
+				"space advances phase",
+				"esc cancel pending",
+			},
+			unwanted: []string{"tab focus"},
+		},
+		{
+			name:      "equipment expanded",
+			activeTab: 2,
+			showHelp:  true,
+			want: []string{
+				"Equipment:",
+				"scaffold view",
+				"space advances phase",
+				"esc cancel pending",
+			},
+			unwanted: []string{"enter accept/assign"},
+		},
+		{
+			name:      "help expanded",
+			activeTab: helpTabIndex,
+			showHelp:  true,
+			want: []string{
+				"Help:",
+				"read controls",
+				"esc close footer/cancel pending",
+			},
+			unwanted: []string{"equipment scaffold"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			view := RenderDashboard(DashboardView{
+				State:     content.InitialGameState(42),
+				Width:     TargetWidth,
+				Height:    TargetHeight,
+				ActiveTab: tt.activeTab,
+				ShowHelp:  tt.showHelp,
+				Styles:    NewStyles(),
+			})
+			content := ansi.Strip(view.Content)
+			for _, want := range tt.want {
+				if !strings.Contains(content, want) {
+					t.Fatalf("rendered footer missing %q", want)
+				}
+			}
+			for _, unwanted := range tt.unwanted {
+				if strings.Contains(content, unwanted) {
+					t.Fatalf("rendered footer unexpectedly contained %q", unwanted)
+				}
+			}
+		})
 	}
 }
 
