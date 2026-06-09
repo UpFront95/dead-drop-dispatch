@@ -436,7 +436,7 @@ func TestRenderDashboardPlaceholderTabLeavesBodyBlank(t *testing.T) {
 		State:     content.InitialGameState(42),
 		Width:     TargetWidth,
 		Height:    TargetHeight,
-		ActiveTab: 4,
+		ActiveTab: 2,
 		Styles:    NewStyles(),
 	})
 
@@ -444,7 +444,7 @@ func TestRenderDashboardPlaceholderTabLeavesBodyBlank(t *testing.T) {
 	for _, want := range []string{
 		"DEAD DROP DISPATCH",
 		"EQUIPMENT",
-		"tab focus   [ ] tabs   j/k select   enter accept/assign   r route   space resolve   ? more   q quit",
+		"tab focus   [ and ] tabs   j/k select   enter accept/assign   r route   space resolve   ? more   q quit",
 	} {
 		if !strings.Contains(content, want) {
 			t.Fatalf("rendered placeholder tab missing %q", want)
@@ -473,6 +473,54 @@ func TestRenderDashboardPlaceholderTabLeavesBodyBlank(t *testing.T) {
 	}
 }
 
+func TestRenderDashboardRoutingTabUsesTopology(t *testing.T) {
+	state := content.InitialGameState(42)
+	view := RenderDashboard(DashboardView{
+		State:              state,
+		Width:              TargetWidth,
+		Height:             TargetHeight,
+		ActiveTab:          1,
+		SelectedJobIndex:   0,
+		SelectedRouteIndex: 1,
+		Styles:             NewStyles(),
+	})
+
+	content := ansi.Strip(view.Content)
+	for _, want := range []string{
+		"DEAD DROP DISPATCH",
+		"ROUTING",
+		"ROUTE MAP",
+		"ROUTE DETAIL",
+		"District topology",
+		"[O]",
+		"[D]",
+		state.AvailableJobs[0].Title,
+		"Route options",
+	} {
+		if !strings.Contains(content, want) {
+			t.Fatalf("rendered routing tab missing %q", want)
+		}
+	}
+
+	for _, unwanted := range []string{
+		"CITY SECTOR",
+		"MESSAGE FEED",
+		"Desk is live. City is listening.",
+	} {
+		if strings.Contains(content, unwanted) {
+			t.Fatalf("rendered routing tab unexpectedly contained %q", unwanted)
+		}
+	}
+
+	if got := lineCount(content); got != TargetHeight {
+		t.Fatalf("rendered routing tab height = %d, want %d", got, TargetHeight)
+	}
+
+	if got := maxLineWidth(content); got > TargetWidth {
+		t.Fatalf("rendered routing tab width = %d, want <= %d", got, TargetWidth)
+	}
+}
+
 func TestRenderDashboardHelpFooterShowsExpandedShortcuts(t *testing.T) {
 	view := RenderDashboard(DashboardView{
 		State:    content.InitialGameState(42),
@@ -485,7 +533,7 @@ func TestRenderDashboardHelpFooterShowsExpandedShortcuts(t *testing.T) {
 	content := view.Content
 	for _, want := range []string{
 		"shift+tab prev panel",
-		"1-6 jump tabs",
+		"1-4 jump tabs",
 		"arrows move",
 		"[ and ] tabs",
 		"? less",

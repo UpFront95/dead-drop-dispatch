@@ -23,9 +23,7 @@ type ScreenTab int
 
 const (
 	ScreenDashboard ScreenTab = iota
-	ScreenJobs
 	ScreenRouting
-	ScreenRunners
 	ScreenEquipment
 	ScreenHelp
 	screenTabCount
@@ -97,14 +95,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "1":
 			m.tab = ScreenDashboard
 		case "2":
-			m.tab = ScreenJobs
-		case "3":
 			m.tab = ScreenRouting
-		case "4":
-			m.tab = ScreenRunners
-		case "5":
+		case "3":
 			m.tab = ScreenEquipment
-		case "6":
+		case "4":
 			m.tab = ScreenHelp
 		case "?":
 			m.showHelp = !m.showHelp

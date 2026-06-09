@@ -183,7 +183,7 @@ Promote the dashboard from a display surface into the primary command center for
 | Status | ID | Priority | Task |
 |---|---|---|---|
 | [x] | TUI-03 | P2 | **DONE (2026-06-07).** Dashboard now accepts jobs, assigns runners, cycles selected routes, supports bundling through assignment, advances/resolves turns with `space`, renders pending assignment route detail, and has app-level workflow tests for accept/assign/resolve. |
-| [ ] | TUI-04 | P2 | Add jobs, routing, runners, factions, messages, log, and help screens. |
+| [x] | TUI-04 | P2 | **DONE (2026-06-09).** Narrowed secondary surfaces to a real help view and routing/map view, kept Equipment as a retained scaffold, and kept jobs, runners, messages, log, and factions dashboard-native or contextual. |
 | [ ] | TUI-05 | P2 | Add screen-specific key maps. |
 | [x] | TUI-06 | P1 | **DONE (2026-06-07).** Added phase-aware empty states for no posted jobs and no messages plus clearer runner detail copy for no active assignments, with render smoke coverage. |
 | [ ] | TUI-07 | P2 | Add confirmation prompts for risky actions. |
@@ -191,7 +191,7 @@ Promote the dashboard from a display surface into the primary command center for
 | [x] | TUI-09 | P2 | **DONE (2026-06-07).** Added compact `B1`/`B2` bundle markers in the runner roster, `Bundle n/2` detail headers with penalty display, and pending-assignment cues when the selected runner would bundle or is full, with render smoke coverage. |
 | [ ] | TUI-10 | P1 | Improve panel sizing across narrow and wide terminals. |
 | [ ] | TUI-11 | P1 | Improve help text once the loop input model is final. |
-| [ ] | TUI-12 | P2 | Render an ASCII district map or route topology that makes district-to-district choices legible. |
+| [x] | TUI-12 | P2 | **DONE (2026-06-09).** Added a routing tab with ASCII district topology, selected job origin/destination markers, selected route detail, path summaries, and render smoke coverage. |
 | [ ] | TUI-13 | P2 | Add progress and status indicators for night, turn, deadlines, active jobs, runner state, cargo integrity, and heat. |
 | [ ] | TUI-14 | P1 | Format event logs as timestamped diegetic terminal output with clear outcome and cause text. |
 | [x] | TUI-15 | P1 | **DONE (2026-06-08).** Exposed fixed message response actions from the dashboard message feed with message selection, response cycling, enter-to-send resolution, action-strip reply cues, message detail rendering, and app/render tests. |

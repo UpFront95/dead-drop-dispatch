@@ -39,9 +39,7 @@ type DashboardView struct {
 
 var dashboardTabs = []string{
 	"DASHBOARD",
-	"JOBS",
 	"ROUTING",
-	"RUNNERS",
 	"EQUIPMENT",
 	"HELP",
 }
@@ -63,8 +61,13 @@ func RenderDashboard(view DashboardView) tea.View {
 	}
 
 	body := blankLines(width, bodyHeight)
-	if view.ActiveTab == 0 {
+	switch view.ActiveTab {
+	case 0:
 		body = renderDashboardBody(view, width, bodyHeight, styles)
+	case 1:
+		body = renderRoutingBody(view, width, bodyHeight, styles)
+	case helpTabIndex:
+		body = renderHelpBody(width, bodyHeight, styles)
 	}
 
 	rendered := styles.Base.Width(width).Height(height).Render(lipgloss.JoinVertical(lipgloss.Left, header, tabs, body, footer))
@@ -107,6 +110,36 @@ func renderDashboardBody(view DashboardView, width int, bodyHeight int, styles S
 	top := lipgloss.JoinHorizontal(lipgloss.Top, city, strings.Repeat(" ", gap), runners, strings.Repeat(" ", gap), jobs)
 	bottom := lipgloss.JoinHorizontal(lipgloss.Top, messages, strings.Repeat(" ", gap), detail)
 	return lipgloss.JoinVertical(lipgloss.Left, top, renderActionStrip(view, width, spacerH, styles), bottom)
+}
+
+func renderRoutingBody(view DashboardView, width int, bodyHeight int, styles Styles) string {
+	gap := 1
+	mapW := min(68, max(48, width*3/5))
+	detailW := width - mapW - gap
+	if detailW < 36 {
+		detailW = 36
+		mapW = width - detailW - gap
+	}
+
+	job, hasJob := currentDecisionJob(view)
+	var jobPtr *game.Job
+	if hasJob {
+		jobPtr = &job
+	}
+
+	mapBody := RenderRouteTopology(RouteTopologyView{
+		State:              view.State,
+		Job:                jobPtr,
+		SelectedRouteIndex: view.SelectedRouteIndex,
+		Width:              max(1, panelContentWidth(styles.Panel, mapW)),
+		Height:             max(1, panelBodyHeight(styles.Panel, bodyHeight)),
+		Styles:             styles,
+	})
+	detailBody := renderRoutingDetail(view.State, jobPtr, view.SelectedRouteIndex, styles)
+
+	mapPanel := panel("ROUTE MAP", mapBody, mapW, bodyHeight, false, styles)
+	detailPanel := panel("ROUTE DETAIL", detailBody, detailW, bodyHeight, false, styles)
+	return lipgloss.JoinHorizontal(lipgloss.Top, mapPanel, strings.Repeat(" ", gap), detailPanel)
 }
 
 func renderTabs(labels []string, active int, width int, styles Styles) string {
@@ -317,9 +350,9 @@ func hasPendingComplication(state game.GameState) bool {
 }
 
 func renderFooter(showHelp bool, width int, styles Styles) string {
-	text := "tab focus   [ ] tabs   j/k select   enter accept/assign   r route   space resolve   ? more   q quit"
+	text := "tab focus   [ and ] tabs   j/k select   enter accept/assign   r route   space resolve   ? more   q quit"
 	if showHelp {
-		text = "shift+tab prev panel   1-6 jump tabs   arrows move   [ and ] tabs   enter accept/assign   r route   space resolve   ? less"
+		text = "shift+tab prev panel   1-4 jump tabs   arrows move   [ and ] tabs   enter accept/assign   r route   space resolve   ? less"
 	}
 	return styles.Help.Width(width).Render(text)
 }
@@ -487,6 +520,39 @@ func renderDetail(state game.GameState, focused int, selectedJob int, selectedRu
 		for _, result := range state.LastResults {
 			lines = append(lines, styles.PanelText.Render(fmt.Sprintf("  %s: %s", result.JobTitle, result.Outcome)))
 		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+func renderRoutingDetail(state game.GameState, job *game.Job, selectedRoute int, styles Styles) string {
+	if job == nil {
+		return strings.Join([]string{
+			styles.Accent.Render("No route selected"),
+			styles.PanelText.Render("Accept or highlight a job to inspect routes."),
+			styles.PanelText.Render("The dashboard remains the command surface."),
+		}, "\n")
+	}
+
+	names := districtNames(state)
+	lines := []string{
+		styles.Accent.Render(clipText(job.Title, 38)),
+		styles.PanelText.Render(clipText(districtName(names, job.Origin)+" -> "+districtName(names, job.Destination), 40)),
+		styles.PanelText.Render(" "),
+		styles.Accent.Render("Route options"),
+	}
+	for i, route := range job.Routes {
+		marker := " "
+		if i == clampIndex(selectedRoute, len(job.Routes)) {
+			marker = ">"
+		}
+		lines = append(lines, styles.PanelText.Render(marker+" "+formatRouteDetail(route)))
+		path := routePathSummary(route, names)
+		if path != "" {
+			lines = append(lines, styles.Muted.Render("  "+clipText(path, 40)))
+		}
+	}
+	if len(job.Routes) == 0 {
+		lines = append(lines, styles.Muted.Render("No generated route options."))
 	}
 	return strings.Join(lines, "\n")
 }
@@ -774,6 +840,11 @@ func panelBodyHeight(style lipgloss.Style, height int) int {
 	return max(0, height-frameH-2)
 }
 
+func panelContentWidth(style lipgloss.Style, width int) int {
+	frameW, _ := style.GetFrameSize()
+	return max(1, width-frameW)
+}
+
 func scrolledLines(lines []string, scroll int, visible int) []string {
 	if visible <= 0 {
 		return nil
@@ -802,6 +873,24 @@ func districtNames(state game.GameState) map[game.DistrictID]string {
 		names[district.ID] = district.Name
 	}
 	return names
+}
+
+func districtName(names map[game.DistrictID]string, id game.DistrictID) string {
+	if name, ok := names[id]; ok {
+		return name
+	}
+	return string(id)
+}
+
+func routePathSummary(route game.Route, names map[game.DistrictID]string) string {
+	if len(route.Districts) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(route.Districts))
+	for _, districtID := range route.Districts {
+		parts = append(parts, districtName(names, districtID))
+	}
+	return strings.Join(parts, " -> ")
 }
 
 func formatCargo(cargo game.CargoType) string {

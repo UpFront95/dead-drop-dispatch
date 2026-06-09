@@ -29,7 +29,7 @@ func TestNewModelUsesInitialState(t *testing.T) {
 func TestModelUpdatesActiveTab(t *testing.T) {
 	model := New(99)
 
-	updated, _ := model.Update(keyPress("5"))
+	updated, _ := model.Update(keyPress("3"))
 	model = updated.(Model)
 	if model.tab != ScreenEquipment {
 		t.Fatalf("tab = %d, want %d", model.tab, ScreenEquipment)
