@@ -335,6 +335,50 @@ func TestRenderDashboardShowsMessageResponses(t *testing.T) {
 	}
 }
 
+func TestRenderDashboardShowsPendingComplicationChoices(t *testing.T) {
+	state := content.InitialGameState(42)
+	complication := testDashboardComplication(game.ComplicationCheckpoint)
+	state.Complications = []game.Complication{complication}
+
+	view := RenderDashboard(DashboardView{
+		State:               state,
+		Width:               TargetWidth,
+		Height:              TargetHeight,
+		Focused:             focusDetail,
+		SelectedChoice:      2,
+		ConfirmComplication: complication.ID,
+		ConfirmChoice:       game.ChoiceBribe,
+		Styles:              NewStyles(),
+	})
+
+	content := ansi.Strip(view.Content)
+	for _, want := range []string{
+		"NEXT resolve complication",
+		"ACTION resolve pending complication",
+		"CHOICE Bribe",
+		"Checkpoint",
+		"Test drop / Mira Vale",
+		"Choices",
+		"  Talk through",
+		"> Bribe !",
+		"Spend credits to keep the line moving.",
+		"Confirm risky choice with enter.",
+		"esc cancels confirmation.",
+	} {
+		if !strings.Contains(content, want) {
+			t.Fatalf("rendered complication choices missing %q", want)
+		}
+	}
+
+	if got := lineCount(content); got != TargetHeight {
+		t.Fatalf("rendered complication dashboard height = %d, want %d", got, TargetHeight)
+	}
+
+	if got := maxLineWidth(content); got > TargetWidth {
+		t.Fatalf("rendered complication dashboard width = %d, want <= %d", got, TargetWidth)
+	}
+}
+
 func TestRenderDashboardShowsBundleMarkers(t *testing.T) {
 	state := bundledDashboardState()
 
@@ -485,6 +529,30 @@ func testDashboardJob(id string, title string, origin game.DistrictID, destinati
 	}
 }
 
+func testDashboardComplication(complicationType game.ComplicationType) game.Complication {
+	definition, ok := game.ComplicationDefinitionFor(complicationType)
+	if !ok {
+		panic("missing complication definition")
+	}
+	return game.Complication{
+		ID:             "cmp-test",
+		Type:           definition.Type,
+		Status:         game.ComplicationPending,
+		Title:          definition.Title,
+		Prompt:         definition.Prompt,
+		Choices:        definition.Choices,
+		Turn:           1,
+		Night:          1,
+		JobID:          "job-test",
+		JobTitle:       "Test drop",
+		RunnerID:       "runner-test",
+		RunnerName:     "Mira Vale",
+		FactionID:      "clinic",
+		CargoIntegrity: game.DefaultCargoIntegrity,
+		Summary:        definition.Title + " complication on Test drop with Mira Vale.",
+	}
+}
+
 func TestRenderDashboardPlaceholderTabLeavesBodyBlank(t *testing.T) {
 	view := RenderDashboard(DashboardView{
 		State:     content.InitialGameState(42),
@@ -621,7 +689,8 @@ func TestRenderDashboardFooterUsesScreenSpecificKeyMaps(t *testing.T) {
 			activeTab: 0,
 			want: []string{
 				"tab focus",
-				"enter accept/assign",
+				"enter action",
+				"r route/choice",
 				"space resolve",
 			},
 			unwanted: []string{"equipment scaffold"},

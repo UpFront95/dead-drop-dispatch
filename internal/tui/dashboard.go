@@ -19,22 +19,25 @@ const (
 )
 
 type DashboardView struct {
-	State              game.GameState
-	Width              int
-	Height             int
-	Focused            int
-	ActiveTab          int
-	SelectedDistrict   int
-	SelectedJobIndex   int
-	SelectedRunner     int
-	SelectedRouteIndex int
-	SelectedMessage    int
-	SelectedResponse   int
-	MessageScroll      int
-	Notice             string
-	ShowDistrictBrief  bool
-	ShowHelp           bool
-	Styles             Styles
+	State               game.GameState
+	Width               int
+	Height              int
+	Focused             int
+	ActiveTab           int
+	SelectedDistrict    int
+	SelectedJobIndex    int
+	SelectedRunner      int
+	SelectedRouteIndex  int
+	SelectedMessage     int
+	SelectedResponse    int
+	SelectedChoice      int
+	MessageScroll       int
+	Notice              string
+	ShowDistrictBrief   bool
+	ShowHelp            bool
+	ConfirmComplication game.ComplicationID
+	ConfirmChoice       game.ComplicationChoiceID
+	Styles              Styles
 }
 
 var dashboardTabs = []string{
@@ -105,7 +108,7 @@ func renderDashboardBody(view DashboardView, width int, bodyHeight int, styles S
 	jobs := panel("JOB BOARD", renderJobs(view.State, view.SelectedJobIndex, styles), rightW, topH, view.Focused == focusJobs, styles)
 
 	messages := panel("MESSAGE FEED", renderMessages(view.State, view.SelectedMessage, view.MessageScroll, panelBodyHeight(styles.Panel, bottomH), styles), leftW+midW+gap, bottomH, view.Focused == focusMessages, styles)
-	detail := panel("DETAIL", renderDetail(view.State, view.Focused, view.SelectedJobIndex, view.SelectedRunner, view.SelectedRouteIndex, view.SelectedMessage, view.SelectedResponse, view.Notice, styles), rightW, bottomH, view.Focused == focusDetail, styles)
+	detail := panel("DETAIL", renderDetail(view.State, view.Focused, view.SelectedJobIndex, view.SelectedRunner, view.SelectedRouteIndex, view.SelectedMessage, view.SelectedResponse, view.SelectedChoice, view.Notice, view.ConfirmComplication, view.ConfirmChoice, styles), rightW, bottomH, view.Focused == focusDetail, styles)
 
 	top := lipgloss.JoinHorizontal(lipgloss.Top, city, strings.Repeat(" ", gap), runners, strings.Repeat(" ", gap), jobs)
 	bottom := lipgloss.JoinHorizontal(lipgloss.Top, messages, strings.Repeat(" ", gap), detail)
@@ -269,6 +272,10 @@ func compactActionLine(view DashboardView) string {
 	} else if len(state.LastResults) > 0 {
 		last := state.LastResults[len(state.LastResults)-1]
 		parts = append(parts, fmt.Sprintf("LAST %s: %s", last.JobTitle, last.Outcome))
+	}
+	if complication, ok := currentPendingComplication(state); ok && len(complication.Choices) > 0 {
+		choice := complication.Choices[clampIndex(view.SelectedChoice, len(complication.Choices))]
+		parts = append(parts, "CHOICE "+choice.Label)
 	}
 	if view.Notice != "" {
 		parts = append(parts, "NOTE "+view.Notice)
@@ -437,12 +444,17 @@ func currentDecisionRoute(view DashboardView, job game.Job) (game.Route, bool) {
 }
 
 func hasPendingComplication(state game.GameState) bool {
+	_, ok := currentPendingComplication(state)
+	return ok
+}
+
+func currentPendingComplication(state game.GameState) (game.Complication, bool) {
 	for _, complication := range state.Complications {
 		if complication.Status == game.ComplicationPending {
-			return true
+			return complication, true
 		}
 	}
-	return false
+	return game.Complication{}, false
 }
 
 func renderFooter(activeTab int, showHelp bool, width int, styles Styles) string {
@@ -478,8 +490,8 @@ func footerKeyMap(activeTab int) footerKeyMapText {
 		}
 	default:
 		return footerKeyMapText{
-			compact:  "tab focus   [ and ] tabs   j/k select   enter accept/assign   r route   space resolve   ? more   q quit",
-			expanded: "shift+tab prev panel   1-4 jump tabs   arrows move   [ and ] tabs   enter accept/assign   r route   space resolve   ? less",
+			compact:  "tab focus   [ and ] tabs   j/k select   enter action   r route/choice   space resolve   ? more   q quit",
+			expanded: "shift+tab prev panel   1-4 jump tabs   arrows move   [ and ] tabs   enter acts on selection   r route/choice   space resolve   ? less",
 		}
 	}
 }
@@ -613,7 +625,10 @@ func renderNoJobsState(state game.GameState, styles Styles) []string {
 	return lines
 }
 
-func renderDetail(state game.GameState, focused int, selectedJob int, selectedRunner int, selectedRoute int, selectedMessage int, selectedResponse int, notice string, styles Styles) string {
+func renderDetail(state game.GameState, focused int, selectedJob int, selectedRunner int, selectedRoute int, selectedMessage int, selectedResponse int, selectedChoice int, notice string, confirmComplication game.ComplicationID, confirmChoice game.ComplicationChoiceID, styles Styles) string {
+	if complication, ok := currentPendingComplication(state); ok {
+		return renderComplicationDetail(complication, selectedChoice, notice, confirmComplication, confirmChoice, styles)
+	}
 	if len(state.AcceptedJobs) > 0 {
 		return renderAcceptedJobDetail(state, state.AcceptedJobs[0], selectedRunner, selectedRoute, notice, styles)
 	}
@@ -647,6 +662,55 @@ func renderDetail(state game.GameState, focused int, selectedJob int, selectedRu
 		for _, result := range state.LastResults {
 			lines = append(lines, styles.PanelText.Render(fmt.Sprintf("  %s: %s", result.JobTitle, result.Outcome)))
 		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+func renderComplicationDetail(complication game.Complication, selectedChoice int, notice string, confirmComplication game.ComplicationID, confirmChoice game.ComplicationChoiceID, styles Styles) string {
+	lines := []string{}
+	if notice != "" {
+		lines = append(lines, styles.Warning.Render(notice), styles.PanelText.Render(" "))
+	}
+	lines = append(lines,
+		styles.Accent.Render(complication.Title),
+		styles.PanelText.Render(clipText(complication.JobTitle+" / "+complication.RunnerName, 42)),
+	)
+	for _, line := range wrapText(complication.Prompt, 40, 2) {
+		lines = append(lines, styles.PanelText.Render(line))
+	}
+	lines = append(lines,
+		styles.PanelText.Render(" "),
+		styles.Accent.Render("Choices"),
+	)
+	selectedChoice = clampIndex(selectedChoice, len(complication.Choices))
+	for i, choice := range complication.Choices {
+		marker := " "
+		if i == selectedChoice {
+			marker = ">"
+		}
+		label := choice.Label
+		if game.ComplicationChoiceRequiresConfirmation(choice.ID) {
+			label += " !"
+		}
+		lines = append(lines, styles.PanelText.Render(marker+" "+label))
+		if i == selectedChoice && choice.Description != "" {
+			lines = append(lines, styles.Muted.Render("  "+clipText(choice.Description, 38)))
+		}
+	}
+	if len(complication.Choices) == 0 {
+		lines = append(lines, styles.Muted.Render("No choices available."))
+	}
+	if confirmComplication == complication.ID && confirmChoice != "" {
+		lines = append(lines,
+			styles.PanelText.Render(" "),
+			styles.Critical.Render("Confirm risky choice with enter."),
+			styles.Muted.Render("esc cancels confirmation."),
+		)
+	} else {
+		lines = append(lines,
+			styles.PanelText.Render(" "),
+			styles.Muted.Render("r cycles choice, enter resolves."),
+		)
 	}
 	return strings.Join(lines, "\n")
 }

@@ -463,6 +463,28 @@ func complicationHasChoice(complication Complication, choiceID ComplicationChoic
 	return false
 }
 
+func ComplicationChoiceRequiresConfirmation(choiceID ComplicationChoiceID) bool {
+	switch choiceID {
+	case ChoiceAbandon,
+		ChoiceAbort,
+		ChoiceBribe,
+		ChoicePayToll,
+		ChoiceSeekClinic,
+		ChoiceContinue,
+		ChoiceDumpCargo,
+		ChoiceSpoofTag,
+		ChoiceOrderForward,
+		ChoiceThreaten,
+		ChoiceSedateWitness,
+		ChoiceBurnNode,
+		ChoiceBreakCurfew,
+		ChoiceBlockCourier:
+		return true
+	default:
+		return false
+	}
+}
+
 func addRunnerStress(state *GameState, runnerID RunnerID, delta int) {
 	if runnerIndex := findRunnerIndex(state.Runners, runnerID); runnerIndex >= 0 {
 		state.Runners[runnerIndex].Stress = clampInt(state.Runners[runnerIndex].Stress+delta, 0, MaxRunnerStress)

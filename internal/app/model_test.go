@@ -258,6 +258,91 @@ func TestModelResolvesActiveJobsFromDashboard(t *testing.T) {
 	}
 }
 
+func TestModelResolvesPendingComplicationChoiceFromDashboard(t *testing.T) {
+	model := New(99)
+	model.focused = PanelDetail
+	model.state.Complications = []game.Complication{testAppComplication(game.ComplicationSignalLoss)}
+
+	updated, _ := model.Update(keyPress("r"))
+	model = updated.(Model)
+	if got, want := model.selectedChoice, 1; got != want {
+		t.Fatalf("selected choice = %d, want %d", got, want)
+	}
+
+	updated, _ = model.Update(keyPress("enter"))
+	model = updated.(Model)
+
+	complication := model.state.Complications[0]
+	if got, want := complication.Status, game.ComplicationResolved; got != want {
+		t.Fatalf("complication status = %q, want %q", got, want)
+	}
+	if got, want := complication.ResolvedBy, game.ChoiceWait; got != want {
+		t.Fatalf("resolved by = %q, want %q", got, want)
+	}
+	if model.confirmChoice != "" {
+		t.Fatalf("confirmation should clear, got %q", model.confirmChoice)
+	}
+	if model.notice != "Resolved Signal Loss with Wait." {
+		t.Fatalf("notice = %q", model.notice)
+	}
+	if got, want := model.state.Messages[len(model.state.Messages)-1].Subject, "complication resolved"; got != want {
+		t.Fatalf("last message subject = %q, want %q", got, want)
+	}
+}
+
+func TestModelConfirmsRiskyComplicationChoice(t *testing.T) {
+	model := New(99)
+	model.focused = PanelDetail
+	model.state.Complications = []game.Complication{testAppComplication(game.ComplicationCheckpoint)}
+	model.selectedChoice = 2
+
+	updated, _ := model.Update(keyPress("enter"))
+	model = updated.(Model)
+	if got, want := model.state.Complications[0].Status, game.ComplicationPending; got != want {
+		t.Fatalf("complication status after first enter = %q, want %q", got, want)
+	}
+	if got, want := model.confirmChoice, game.ChoiceBribe; got != want {
+		t.Fatalf("confirm choice = %q, want %q", got, want)
+	}
+	if model.notice == "" {
+		t.Fatal("first risky enter should set confirmation notice")
+	}
+
+	updated, _ = model.Update(keyPress("enter"))
+	model = updated.(Model)
+	if got, want := model.state.Complications[0].Status, game.ComplicationResolved; got != want {
+		t.Fatalf("complication status after second enter = %q, want %q", got, want)
+	}
+	if got, want := model.state.Complications[0].ResolvedBy, game.ChoiceBribe; got != want {
+		t.Fatalf("resolved by = %q, want %q", got, want)
+	}
+	if model.confirmChoice != "" {
+		t.Fatalf("confirmation should clear, got %q", model.confirmChoice)
+	}
+}
+
+func TestModelEscCancelsRiskyComplicationConfirmation(t *testing.T) {
+	model := New(99)
+	model.focused = PanelDetail
+	model.state.Complications = []game.Complication{testAppComplication(game.ComplicationCheckpoint)}
+	model.selectedChoice = 2
+
+	updated, _ := model.Update(keyPress("enter"))
+	model = updated.(Model)
+	updated, _ = model.Update(keyPress("esc"))
+	model = updated.(Model)
+
+	if got, want := model.state.Complications[0].Status, game.ComplicationPending; got != want {
+		t.Fatalf("complication status = %q, want %q", got, want)
+	}
+	if model.confirmChoice != "" {
+		t.Fatalf("confirmation should clear, got %q", model.confirmChoice)
+	}
+	if model.notice != "Choice confirmation canceled." {
+		t.Fatalf("notice = %q", model.notice)
+	}
+}
+
 func keyPress(text string) tea.KeyPressMsg {
 	return tea.KeyPressMsg(tea.Key{Text: text, Code: []rune(text)[0]})
 }
@@ -278,4 +363,28 @@ func mustResponseAction(t *testing.T, actionID game.MessageResponseActionID) gam
 		t.Fatalf("missing response action %s", actionID)
 	}
 	return action
+}
+
+func testAppComplication(complicationType game.ComplicationType) game.Complication {
+	definition, ok := game.ComplicationDefinitionFor(complicationType)
+	if !ok {
+		panic("missing complication definition")
+	}
+	return game.Complication{
+		ID:             "cmp-test",
+		Type:           definition.Type,
+		Status:         game.ComplicationPending,
+		Title:          definition.Title,
+		Prompt:         definition.Prompt,
+		Choices:        definition.Choices,
+		Turn:           1,
+		Night:          1,
+		JobID:          "job-test",
+		JobTitle:       "Test drop",
+		RunnerID:       "runner-test",
+		RunnerName:     "Mira Vale",
+		FactionID:      "clinic",
+		CargoIntegrity: game.DefaultCargoIntegrity,
+		Summary:        definition.Title + " complication on Test drop with Mira Vale.",
+	}
 }

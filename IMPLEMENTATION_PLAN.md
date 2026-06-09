@@ -186,7 +186,7 @@ Promote the dashboard from a display surface into the primary command center for
 | [x] | TUI-04 | P2 | **DONE (2026-06-09).** Narrowed secondary surfaces to a real help view and routing/map view, kept Equipment as a retained scaffold, and kept jobs, runners, messages, log, and factions dashboard-native or contextual. |
 | [x] | TUI-05 | P2 | **DONE (2026-06-09).** Added active-tab footer key maps for Dashboard, Routing, Equipment, and Help, including compact and expanded `?` help variants with render smoke coverage. |
 | [x] | TUI-06 | P1 | **DONE (2026-06-07).** Added phase-aware empty states for no posted jobs and no messages plus clearer runner detail copy for no active assignments, with render smoke coverage. |
-| [ ] | TUI-07 | P2 | Add confirmation prompts for risky actions. |
+| [x] | TUI-07 | P2 | **DONE (2026-06-09).** Activated pending complication choices from the dashboard detail flow, added choice cycling and resolution wiring, and required second-press confirmation for costly or destructive choices. |
 | [x] | TUI-08 | P2 | **DONE (2026-06-07).** Added a right-aligned header `NEXT` chip and a compact center spacer strip showing current action, selected job risk factors, selected route summary, and notices without adding a new panel. |
 | [x] | TUI-09 | P2 | **DONE (2026-06-07).** Added compact `B1`/`B2` bundle markers in the runner roster, `Bundle n/2` detail headers with penalty display, and pending-assignment cues when the selected runner would bundle or is full, with render smoke coverage. |
 | [ ] | TUI-10 | P1 | Improve panel sizing across narrow and wide terminals. |

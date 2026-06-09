@@ -30,22 +30,25 @@ const (
 )
 
 type Model struct {
-	state              game.GameState
-	width              int
-	height             int
-	focused            Panel
-	tab                ScreenTab
-	selectedDistrict   int
-	selectedJobIndex   int
-	selectedRunner     int
-	selectedRouteIndex int
-	selectedMessage    int
-	selectedResponse   int
-	messageScroll      int
-	notice             string
-	showDistrictBrief  bool
-	showHelp           bool
-	styles             tui.Styles
+	state               game.GameState
+	width               int
+	height              int
+	focused             Panel
+	tab                 ScreenTab
+	selectedDistrict    int
+	selectedJobIndex    int
+	selectedRunner      int
+	selectedRouteIndex  int
+	selectedMessage     int
+	selectedResponse    int
+	selectedChoice      int
+	messageScroll       int
+	notice              string
+	showDistrictBrief   bool
+	showHelp            bool
+	confirmComplication game.ComplicationID
+	confirmChoice       game.ComplicationChoiceID
+	styles              tui.Styles
 }
 
 func New(seed int64) Model {
@@ -110,27 +113,35 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) View() tea.View {
 	return tui.RenderDashboard(tui.DashboardView{
-		State:              m.state,
-		Width:              m.width,
-		Height:             m.height,
-		Focused:            int(m.focused),
-		ActiveTab:          int(m.tab),
-		SelectedDistrict:   m.selectedDistrict,
-		SelectedJobIndex:   m.selectedJobIndex,
-		SelectedRunner:     m.selectedRunner,
-		SelectedRouteIndex: m.selectedRouteIndex,
-		SelectedMessage:    m.selectedMessage,
-		SelectedResponse:   m.selectedResponse,
-		MessageScroll:      m.messageScroll,
-		Notice:             m.notice,
-		ShowDistrictBrief:  m.showDistrictBrief,
-		ShowHelp:           m.showHelp,
-		Styles:             m.styles,
+		State:               m.state,
+		Width:               m.width,
+		Height:              m.height,
+		Focused:             int(m.focused),
+		ActiveTab:           int(m.tab),
+		SelectedDistrict:    m.selectedDistrict,
+		SelectedJobIndex:    m.selectedJobIndex,
+		SelectedRunner:      m.selectedRunner,
+		SelectedRouteIndex:  m.selectedRouteIndex,
+		SelectedMessage:     m.selectedMessage,
+		SelectedResponse:    m.selectedResponse,
+		SelectedChoice:      m.selectedChoice,
+		MessageScroll:       m.messageScroll,
+		Notice:              m.notice,
+		ShowDistrictBrief:   m.showDistrictBrief,
+		ShowHelp:            m.showHelp,
+		ConfirmComplication: m.confirmComplication,
+		ConfirmChoice:       m.confirmChoice,
+		Styles:              m.styles,
 	})
 }
 
 func (m *Model) moveSelection(delta int) {
 	m.notice = ""
+	m.clearConfirmation()
+	if complication, ok := firstPendingComplication(m.state); ok && len(complication.Choices) > 0 && (m.focused == PanelDetail || m.focused == PanelMessages) {
+		m.selectedChoice = wrapIndex(m.selectedChoice+delta, len(complication.Choices))
+		return
+	}
 	switch m.focused {
 	case PanelCity:
 		m.selectedDistrict = wrapIndex(m.selectedDistrict+delta, len(m.state.Districts))
@@ -148,6 +159,9 @@ func (m *Model) moveSelection(delta int) {
 }
 
 func (m *Model) confirmSelection() {
+	if m.resolveSelectedComplicationChoice() {
+		return
+	}
 	switch m.focused {
 	case PanelCity:
 		m.openDistrictBriefing()
@@ -163,6 +177,11 @@ func (m *Model) confirmSelection() {
 }
 
 func (m *Model) back() {
+	if m.confirmChoice != "" {
+		m.clearConfirmation()
+		m.notice = "Choice confirmation canceled."
+		return
+	}
 	if m.showDistrictBrief {
 		m.showDistrictBrief = false
 		m.notice = ""
@@ -242,6 +261,12 @@ func (m *Model) assignPendingJob() {
 }
 
 func (m *Model) cycleRoute() {
+	if complication, ok := firstPendingComplication(m.state); ok && len(complication.Choices) > 0 {
+		m.selectedChoice = wrapIndex(m.selectedChoice+1, len(complication.Choices))
+		m.clearConfirmation()
+		m.notice = ""
+		return
+	}
 	if m.focused == PanelMessages {
 		m.selectedResponse = wrapIndex(m.selectedResponse+1, selectedMessageResponseCount(m.state, m.selectedMessage))
 		m.notice = ""
@@ -256,6 +281,8 @@ func (m *Model) advanceTurnPhase() {
 	m.selectedRouteIndex = 0
 	m.selectedMessage = wrapIndex(m.selectedMessage, len(m.state.Messages))
 	m.selectedResponse = 0
+	m.selectedChoice = clampSelectedChoice(m.state, m.selectedChoice)
+	m.clearConfirmation()
 	results := advance.Results
 	if len(results) == 1 {
 		m.notice = "Resolved " + results[0].JobTitle + ": " + string(results[0].Outcome) + "."
@@ -286,11 +313,64 @@ func (m *Model) respondToSelectedMessage() {
 	m.notice = "Sent response: " + response.Label + "."
 }
 
+func (m *Model) resolveSelectedComplicationChoice() bool {
+	complication, ok := firstPendingComplication(m.state)
+	if !ok {
+		return false
+	}
+	if len(complication.Choices) == 0 {
+		m.notice = "Pending complication has no choices."
+		return true
+	}
+	choice := complication.Choices[wrapIndex(m.selectedChoice, len(complication.Choices))]
+	if game.ComplicationChoiceRequiresConfirmation(choice.ID) && (m.confirmComplication != complication.ID || m.confirmChoice != choice.ID) {
+		m.confirmComplication = complication.ID
+		m.confirmChoice = choice.ID
+		m.notice = "Confirm " + choice.Label + ": press enter again, esc cancels."
+		return true
+	}
+
+	if _, err := game.ResolveComplicationChoice(&m.state, complication.ID, choice.ID); err != nil {
+		m.notice = err.Error()
+		m.clearConfirmation()
+		return true
+	}
+	m.selectedChoice = clampSelectedChoice(m.state, m.selectedChoice)
+	m.selectedMessage = wrapIndex(m.selectedMessage, len(m.state.Messages))
+	m.selectedResponse = 0
+	m.clearConfirmation()
+	m.focused = PanelDetail
+	m.notice = "Resolved " + complication.Title + " with " + choice.Label + "."
+	return true
+}
+
 func pendingRouteCount(state game.GameState) int {
 	if len(state.AcceptedJobs) == 0 {
 		return 0
 	}
 	return len(state.AcceptedJobs[0].Routes)
+}
+
+func firstPendingComplication(state game.GameState) (game.Complication, bool) {
+	for _, complication := range state.Complications {
+		if complication.Status == game.ComplicationPending {
+			return complication, true
+		}
+	}
+	return game.Complication{}, false
+}
+
+func clampSelectedChoice(state game.GameState, selected int) int {
+	complication, ok := firstPendingComplication(state)
+	if !ok {
+		return 0
+	}
+	return wrapIndex(selected, len(complication.Choices))
+}
+
+func (m *Model) clearConfirmation() {
+	m.confirmComplication = ""
+	m.confirmChoice = ""
 }
 
 func selectedMessageResponseCount(state game.GameState, selected int) int {
