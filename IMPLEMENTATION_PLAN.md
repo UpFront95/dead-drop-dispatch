@@ -282,7 +282,7 @@ Exit criteria:
 - Phase 3 complete.
 - Threshold task STA-05 complete.
 - Core loop tasks RUN-01, RUN-02, RUN-03, RUN-04, RUN-05, RUN-06, RUN-07, and RUN-08 complete.
-- Dashboard play tasks TUI-03, TUI-07, TUI-08, TUI-09, TUI-12, and TUI-13 complete.
+- Dashboard play tasks TUI-03, TUI-04, TUI-07, TUI-08, TUI-09, TUI-12, and TUI-13 complete.
 - Action hook tasks ASN-09, ASN-10, and ECO-01 complete.
 - Player can start a new run; see city, jobs, runners, messages, and status; accept jobs; assign runners; bundle up to two compatible jobs; choose routes; advance turns; resolve deterministic outcomes; read outcome logs; win or lose a seven-night run; and play without an LLM.
 - `go test ./...` passes.
