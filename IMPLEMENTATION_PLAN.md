@@ -190,7 +190,7 @@ Promote the dashboard from a display surface into the primary command center for
 | [x] | TUI-08 | P2 | **DONE (2026-06-07).** Added a right-aligned header `NEXT` chip and a compact center spacer strip showing current action, selected job risk factors, selected route summary, and notices without adding a new panel. |
 | [x] | TUI-09 | P2 | **DONE (2026-06-07).** Added compact `B1`/`B2` bundle markers in the runner roster, `Bundle n/2` detail headers with penalty display, and pending-assignment cues when the selected runner would bundle or is full, with render smoke coverage. |
 | [ ] | TUI-10 | P1 | Improve panel sizing across narrow and wide terminals. |
-| [ ] | TUI-11 | P1 | Improve help text once the loop input model is final. |
+| [x] | TUI-11 | P1 | **DONE (2026-06-09).** Reworked the Help screen with a stat glossary covering header, district, and runner abbreviations plus concise current-control copy, with render coverage. |
 | [x] | TUI-12 | P2 | **DONE (2026-06-09).** Added a routing tab with ASCII district topology, selected job origin/destination markers, selected route detail, path summaries, and render smoke coverage. |
 | [x] | TUI-13 | P2 | **DONE (2026-06-09).** Added compact header indicators for night, turn, credits, heat, dispatch integrity, runner availability, job counts, nearest deadline, and cargo integrity with render smoke coverage. |
 | [ ] | TUI-14 | P1 | Format event logs as timestamped diegetic terminal output with clear outcome and cause text. |

@@ -39,10 +39,10 @@ var helpSections = []helpSection{
 	{
 		title: "Actions",
 		rows: []helpRow{
-			{keys: "enter", text: "accept a job, assign a runner, respond to a message, or open a city brief"},
+			{keys: "enter", text: "accept job, assign runner, respond, or open city brief"},
 			{keys: "r", text: "cycle route options, or cycle message responses in Message Feed"},
 			{keys: "space", text: "advance the turn phase or resolve active runs"},
-			{keys: "esc", text: "go back from a city brief or help, then cancel the pending accepted job"},
+			{keys: "esc", text: "close brief/help, then cancel pending accepted job"},
 		},
 	},
 	{
@@ -78,7 +78,7 @@ func renderHelpSurface(width int, height int, styles Styles) string {
 
 func renderHelpBody(width int, height int, styles Styles) string {
 	gap := 1
-	leftW := min(35, max(30, width/4))
+	leftW := min(52, max(42, width/3))
 	rightW := width - leftW - gap
 	if rightW < 32 {
 		rightW = 32
@@ -95,21 +95,39 @@ func renderHelpBody(width int, height int, styles Styles) string {
 
 func renderHelpOverview(width int, styles Styles) string {
 	lines := []string{
-		styles.Accent.Render("Dashboard-first dispatch"),
-		styles.PanelText.Render("Most work happens in the dashboard panels."),
-		styles.PanelText.Render("Routing has a map view for job geography."),
-		styles.PanelText.Render("Equipment stays available for upgrade work."),
+		styles.Accent.Render("Stat glossary"),
+		statHelpRow("N", "Night", "run day; survive seven", width, styles),
+		statHelpRow("T", "Turn", "dispatch cycle this night", width, styles),
+		statHelpRow("C", "Credits", "cash for costs/upgrades", width, styles),
+		statHelpRow("H", "Heat", "attention; max burns desk", width, styles),
+		statHelpRow("I", "Integrity", "desk health; zero loses", width, styles),
+		statHelpRow("RNR", "Runners", "ready/busy/injured/out", width, styles),
+		statHelpRow("JOB", "Jobs", "board/accepted/active", width, styles),
+		statHelpRow("DUE", "Deadline", "nearest job deadline", width, styles),
+		statHelpRow("CG", "Cargo", "lowest known integrity", width, styles),
 		styles.PanelText.Render(""),
-		styles.Accent.Render("Panel jobs"),
-		styles.PanelText.Render("CITY SECTOR opens district briefs."),
-		styles.PanelText.Render("JOB BOARD accepts posted contracts."),
-		styles.PanelText.Render("RUNNERS assigns accepted jobs."),
-		styles.PanelText.Render("MESSAGE FEED answers open contacts."),
-		styles.PanelText.Render("DETAIL shows routes, runner load, and replies."),
+		styles.Accent.Render("District stats"),
+		statHelpRow("SURV", "Surveillance", "detection risk", width, styles),
+		statHelpRow("TRAF", "Traffic", "crowds, delay, cover", width, styles),
+		statHelpRow("DNGR", "Danger", "injury pressure", width, styles),
+		statHelpRow("SGNL", "Signal", "comms and intel quality", width, styles),
 		styles.PanelText.Render(""),
-		styles.Muted.Render(clipText("Use ? for footer-sized help without leaving the dashboard.", width)),
+		styles.Accent.Render("Runner stats"),
+		statHelpRow("SPD", "Speed", "beats deadlines", width, styles),
+		statHelpRow("STL", "Stealth", "avoids detection", width, styles),
+		statHelpRow("NRV", "Nerve", "holds under pressure", width, styles),
+		statHelpRow("TLK", "Talk", "handles people/gates", width, styles),
+		statHelpRow("LOY", "Loyalty", "resists betrayal pressure", width, styles),
+		statHelpRow("STR", "Stress", "strain; high is risky", width, styles),
+		statHelpRow("CAP", "Capacity", "jobs carried out of 2", width, styles),
 	}
 	return strings.Join(lines, "\n")
+}
+
+func statHelpRow(code string, name string, effect string, width int, styles Styles) string {
+	label := styles.InlineCode.Width(5).Render(clipText(code, 5))
+	text := clipText(name+": "+effect, max(1, width-7))
+	return label + " " + styles.PanelText.Render(text)
 }
 
 func renderHelpControls(width int, styles Styles) string {
