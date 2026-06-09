@@ -127,7 +127,7 @@ func renderHelpOverview(width int, styles Styles) string {
 func statHelpRow(code string, name string, effect string, width int, styles Styles) string {
 	label := styles.InlineCode.Width(5).Render(clipText(code, 5))
 	text := clipText(name+": "+effect, max(1, width-7))
-	return label + " " + styles.PanelText.Render(text)
+	return label + styles.PanelText.Render(" ") + styles.PanelText.Render(text)
 }
 
 func renderHelpControls(width int, styles Styles) string {
@@ -140,7 +140,7 @@ func renderHelpControls(width int, styles Styles) string {
 		for _, row := range section.rows {
 			key := styles.InlineCode.Width(16).Render(clipText(row.keys, 16))
 			description := styles.PanelText.Render(clipText(row.text, max(1, width-18)))
-			lines = append(lines, key+"  "+description)
+			lines = append(lines, key+styles.PanelText.Render("  ")+description)
 		}
 	}
 	return strings.Join(lines, "\n")

@@ -68,7 +68,8 @@ func renderTopologyGrid(job *game.Job, districts map[game.DistrictID]game.Distri
 	for rowIndex, row := range rows {
 		left := renderTopologyNode(row[0], job, districts, routeDistricts, styles)
 		right := renderTopologyNode(row[1], job, districts, routeDistricts, styles)
-		lines = append(lines, left+strings.Repeat(" ", max(2, 28-lipgloss.Width(left)))+right)
+		spacer := styles.PanelText.Render(strings.Repeat(" ", max(2, 28-lipgloss.Width(left))))
+		lines = append(lines, left+spacer+right)
 		if rowIndex < len(rows)-1 {
 			lines = append(lines, styles.Muted.Render("     | market/service        | artery/drone"))
 		}
@@ -79,7 +80,7 @@ func renderTopologyGrid(job *game.Job, districts map[game.DistrictID]game.Distri
 func renderTopologyNode(id game.DistrictID, job *game.Job, districts map[game.DistrictID]game.District, routeDistricts map[game.DistrictID]bool, styles Styles) string {
 	district, ok := districts[id]
 	if !ok {
-		return "[ ] " + string(id)
+		return styles.PanelText.Render("[ ] " + string(id))
 	}
 
 	marker := " "
