@@ -277,12 +277,14 @@ func (m *Model) cycleRoute() {
 }
 
 func (m *Model) advanceTurnPhase() {
+	hadPendingComplication := hasPendingComplication(m.state)
 	advance := game.AdvanceTurnPhase(&m.state)
 	m.selectedRouteIndex = 0
 	m.selectedMessage = wrapIndex(m.selectedMessage, len(m.state.Messages))
 	m.selectedResponse = 0
 	m.selectedChoice = clampSelectedChoice(m.state, m.selectedChoice)
 	m.clearConfirmation()
+	m.focusNewComplicationMessage(hadPendingComplication)
 	results := advance.Results
 	if len(results) == 1 {
 		m.notice = "Resolved " + results[0].JobTitle + ": " + string(results[0].Outcome) + "."
@@ -358,6 +360,31 @@ func firstPendingComplication(state game.GameState) (game.Complication, bool) {
 		}
 	}
 	return game.Complication{}, false
+}
+
+func hasPendingComplication(state game.GameState) bool {
+	_, ok := firstPendingComplication(state)
+	return ok
+}
+
+func (m *Model) focusNewComplicationMessage(hadPendingComplication bool) {
+	if hadPendingComplication || !hasPendingComplication(m.state) || m.focused == PanelMessages {
+		return
+	}
+	m.focused = PanelMessages
+	if messageIndex := lastMessageIndexBySubject(m.state.Messages, "complication opened"); messageIndex >= 0 {
+		m.selectedMessage = messageIndex
+		m.messageScroll = maxInt(0, m.selectedMessage-3)
+	}
+}
+
+func lastMessageIndexBySubject(messages []game.Message, subject string) int {
+	for i := len(messages) - 1; i >= 0; i-- {
+		if messages[i].Subject == subject {
+			return i
+		}
+	}
+	return -1
 }
 
 func clampSelectedChoice(state game.GameState, selected int) int {

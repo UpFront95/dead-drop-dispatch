@@ -343,6 +343,55 @@ func TestModelEscCancelsRiskyComplicationConfirmation(t *testing.T) {
 	}
 }
 
+func TestModelFocusesMessageFeedForNewComplication(t *testing.T) {
+	model := New(99)
+	model.focused = PanelJobs
+	model.selectedMessage = 0
+	model.state.Messages = []game.Message{{
+		Subject: "turn brief",
+		Body:    "Quiet for now.",
+	}, {
+		Subject: "complication opened",
+		Body:    "Signal loss complication on Test drop.",
+	}}
+	model.state.Complications = []game.Complication{testAppComplication(game.ComplicationSignalLoss)}
+
+	model.focusNewComplicationMessage(false)
+
+	if got, want := model.focused, PanelMessages; got != want {
+		t.Fatalf("focused = %d, want %d", got, want)
+	}
+	if got, want := model.selectedMessage, 1; got != want {
+		t.Fatalf("selected message = %d, want %d", got, want)
+	}
+	if got, want := model.messageScroll, 0; got != want {
+		t.Fatalf("message scroll = %d, want %d", got, want)
+	}
+}
+
+func TestModelKeepsMessageFocusWhenNewComplicationAppears(t *testing.T) {
+	model := New(99)
+	model.focused = PanelMessages
+	model.selectedMessage = 0
+	model.state.Messages = []game.Message{{
+		Subject: "runner check",
+		Body:    "Need a call.",
+	}, {
+		Subject: "complication opened",
+		Body:    "Signal loss complication on Test drop.",
+	}}
+	model.state.Complications = []game.Complication{testAppComplication(game.ComplicationSignalLoss)}
+
+	model.focusNewComplicationMessage(false)
+
+	if got, want := model.focused, PanelMessages; got != want {
+		t.Fatalf("focused = %d, want %d", got, want)
+	}
+	if got, want := model.selectedMessage, 0; got != want {
+		t.Fatalf("selected message = %d, want %d", got, want)
+	}
+}
+
 func keyPress(text string) tea.KeyPressMsg {
 	return tea.KeyPressMsg(tea.Key{Text: text, Code: []rune(text)[0]})
 }
