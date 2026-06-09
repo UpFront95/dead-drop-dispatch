@@ -203,6 +203,34 @@ func TestModelAcceptsAndAssignsJobFromDashboard(t *testing.T) {
 	}
 }
 
+func TestModelEscCancelsAcceptedJobFromDashboard(t *testing.T) {
+	model := New(99)
+	model.focused = PanelJobs
+	jobID := model.state.AvailableJobs[0].ID
+
+	updated, _ := model.Update(keyPress("enter"))
+	model = updated.(Model)
+	if !containsAcceptedJob(model.state.AcceptedJobs, jobID) {
+		t.Fatalf("accepted jobs missing %s", jobID)
+	}
+
+	updated, _ = model.Update(keyPress("esc"))
+	model = updated.(Model)
+
+	if containsAcceptedJob(model.state.AcceptedJobs, jobID) {
+		t.Fatalf("accepted jobs still contains canceled job %s", jobID)
+	}
+	if !containsAcceptedJob(model.state.AvailableJobs, jobID) {
+		t.Fatalf("available jobs missing canceled job %s", jobID)
+	}
+	if got, want := model.focused, PanelJobs; got != want {
+		t.Fatalf("focused = %d, want %d", got, want)
+	}
+	if model.notice == "" {
+		t.Fatal("cancel should set a dashboard notice")
+	}
+}
+
 func TestModelResolvesActiveJobsFromDashboard(t *testing.T) {
 	model := New(99)
 	model.focused = PanelJobs

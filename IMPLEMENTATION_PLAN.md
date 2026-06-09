@@ -80,7 +80,7 @@ Establish the Go module, package boundaries, Bubble Tea shell, and initial dashb
 | [ ] | DOC-01 | P1 | Add `README.md` with build, run, test, and prototype scope notes. |
 | [x] | APP-01 | P2 | Implement Bubble Tea model, `Init`, `Update`, `View`, quit keys, resize handling, and dashboard state. |
 | [x] | APP-02 | P2 | Add focus model and navigation for tabs, panel cycling, directional selection, confirm, and help. |
-| [ ] | APP-03 | P2 | Add `esc` back/cancel behavior and `space` advance/resolve behavior for the playable loop. |
+| [x] | APP-03 | P2 | **DONE (2026-06-09).** Verified `space` advances/resolves the phase coordinator, kept `esc` backing out of overlays, and added accepted-job cancel back to the board with app and game tests. |
 | [x] | TUI-01 | P2 | Render static dashboard panels: status bar, city, jobs, runners, messages, detail pane. |
 | [x] | TUI-02 | P2 | Apply initial visual style: thin borders, restrained palette, compact tables, focused panel styling. |
 | [x] | APP-04 | P2 | Add smoke tests for app initialization. |

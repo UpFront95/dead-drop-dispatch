@@ -31,6 +31,22 @@ func AcceptJob(state *GameState, jobID string) error {
 	return nil
 }
 
+func CancelAcceptedJob(state *GameState, jobID string) error {
+	index := findJobIndex(state.AcceptedJobs, jobID)
+	if index < 0 {
+		return ErrJobNotAccepted
+	}
+
+	job := state.AcceptedJobs[index]
+	state.AcceptedJobs = append(state.AcceptedJobs[:index], state.AcceptedJobs[index+1:]...)
+	state.AvailableJobs = append([]Job{job}, state.AvailableJobs...)
+	state.EventLog = append(state.EventLog, LogEntry{
+		Turn: state.Turn,
+		Text: fmt.Sprintf("Canceled pending contract: %s.", job.Title),
+	})
+	return nil
+}
+
 func AssignAcceptedJob(state *GameState, jobID string, runnerID RunnerID, routeID string) error {
 	jobIndex := findJobIndex(state.AcceptedJobs, jobID)
 	if jobIndex < 0 {

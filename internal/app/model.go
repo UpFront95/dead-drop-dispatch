@@ -178,6 +178,18 @@ func (m *Model) back() {
 		m.showHelp = false
 		return
 	}
+	if len(m.state.AcceptedJobs) > 0 {
+		job := m.state.AcceptedJobs[0]
+		if err := game.CancelAcceptedJob(&m.state, job.ID); err != nil {
+			m.notice = err.Error()
+			return
+		}
+		m.selectedRouteIndex = 0
+		m.selectedJobIndex = wrapIndex(m.selectedJobIndex, len(m.state.AvailableJobs))
+		m.focused = PanelJobs
+		m.notice = "Canceled " + job.Title + ". Contract returned to board."
+		return
+	}
 	m.notice = ""
 }
 

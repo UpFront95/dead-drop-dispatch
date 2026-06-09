@@ -27,6 +27,40 @@ func TestAcceptJobMovesAvailableJobToAccepted(t *testing.T) {
 	}
 }
 
+func TestCancelAcceptedJobReturnsJobToAvailable(t *testing.T) {
+	state := content.InitialGameState(42)
+	job := state.AvailableJobs[0]
+
+	if err := game.AcceptJob(&state, job.ID); err != nil {
+		t.Fatalf("AcceptJob returned error: %v", err)
+	}
+	if err := game.CancelAcceptedJob(&state, job.ID); err != nil {
+		t.Fatalf("CancelAcceptedJob returned error: %v", err)
+	}
+
+	if containsJob(state.AcceptedJobs, job.ID) {
+		t.Fatalf("accepted jobs still contains canceled job %s", job.ID)
+	}
+	if !containsJob(state.AvailableJobs, job.ID) {
+		t.Fatalf("available jobs missing canceled job %s", job.ID)
+	}
+	if got, want := state.AvailableJobs[0].ID, job.ID; got != want {
+		t.Fatalf("first available job = %q, want %q", got, want)
+	}
+	if len(state.EventLog) == 0 || state.EventLog[len(state.EventLog)-1].Text == "" {
+		t.Fatal("canceling a job should append a log entry")
+	}
+}
+
+func TestCancelAcceptedJobRejectsUnknownJob(t *testing.T) {
+	state := content.InitialGameState(42)
+
+	err := game.CancelAcceptedJob(&state, "not-accepted")
+	if !errors.Is(err, game.ErrJobNotAccepted) {
+		t.Fatalf("CancelAcceptedJob error = %v, want %v", err, game.ErrJobNotAccepted)
+	}
+}
+
 func TestAssignAcceptedJobMovesJobToActiveAndMarksRunnerBusy(t *testing.T) {
 	state := content.InitialGameState(42)
 	job := state.AvailableJobs[0]
